@@ -3,7 +3,9 @@ import {
   MessageType,
   SERVER_PORT,
   TICK_RATE,
-  SHIP_SPEED,
+  MAX_SPEED,
+  ACCELERATION,
+  BRAKE_FORCE,
   MOUSE_SENSITIVITY,
   MAX_PITCH,
   ROLL_SPEED,
@@ -24,6 +26,7 @@ interface Player {
   yaw: number;
   pitch: number;
   roll: number;
+  speed: number;
   keys: Record<string, boolean>;
   /** Accumulated mouse deltas (summed between ticks) */
   mouseDx: number;
@@ -48,6 +51,7 @@ wss.on('connection', (ws) => {
     yaw: 0,
     pitch: 0,
     roll: 0,
+    speed: 0,
     keys: {},
     mouseDx: 0,
     mouseDy: 0,
@@ -103,17 +107,17 @@ function tick() {
     const forwardY = Math.sin(player.pitch);
     const forwardZ = -Math.cos(player.yaw) * Math.cos(player.pitch);
 
-    // 4. Apply thrust along forward vector
+    // 4. Update speed based on input (no friction — speed holds when coasting)
     if (player.keys['w'] || player.keys['ArrowUp']) {
-      player.x += forwardX * SHIP_SPEED * dt;
-      player.y += forwardY * SHIP_SPEED * dt;
-      player.z += forwardZ * SHIP_SPEED * dt;
+      player.speed = Math.min(player.speed + ACCELERATION * dt, MAX_SPEED);
+    } else if (player.keys['s'] || player.keys['ArrowDown']) {
+      player.speed = Math.max(player.speed - BRAKE_FORCE * dt, 0);
     }
-    if (player.keys['s'] || player.keys['ArrowDown']) {
-      player.x -= forwardX * SHIP_SPEED * dt;
-      player.y -= forwardY * SHIP_SPEED * dt;
-      player.z -= forwardZ * SHIP_SPEED * dt;
-    }
+
+    // 5. Move along forward vector at current speed
+    player.x += forwardX * player.speed * dt;
+    player.y += forwardY * player.speed * dt;
+    player.z += forwardZ * player.speed * dt;
   }
 
   // Broadcast state
@@ -127,6 +131,7 @@ function tick() {
       yaw: p.yaw,
       pitch: p.pitch,
       roll: p.roll,
+      speed: p.speed,
     });
   }
 

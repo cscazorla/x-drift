@@ -42,6 +42,14 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ---- Debug bar ----
+
+const debugBar = document.createElement('div');
+debugBar.style.cssText =
+  'position:fixed;top:0;left:0;width:100%;padding:4px 8px;' +
+  'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none';
+document.body.appendChild(debugBar);
+
 // ---- Player meshes ----
 
 const playerMeshes = new Map<string, THREE.Mesh>();
@@ -161,6 +169,10 @@ ws.addEventListener('message', (event) => {
           me.y + forwardY * 4,
           me.z + forwardZ * 4,
         );
+
+        // Update debug bar
+        debugBar.textContent =
+          `pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
       }
     }
   }

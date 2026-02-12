@@ -37,6 +37,7 @@ export interface PlayerState {
   yaw: number;
   pitch: number;
   roll: number;
+  speed: number;
 }
 
 export interface StateMessage {
@@ -51,7 +52,9 @@ export type ClientMessage = InputMessage;
 
 export const SERVER_PORT = 3000;
 export const TICK_RATE = 60; // server ticks per second
-export const SHIP_SPEED = 5; // units per second
+export const MAX_SPEED = 10; // units per second (top speed)
+export const ACCELERATION = 5; // units/second² when pressing W
+export const BRAKE_FORCE = 8; // units/second² when pressing S
 export const MOUSE_SENSITIVITY = 0.003;
 export const MAX_PITCH = Math.PI / 3; // ±60°
 export const ROLL_SPEED = 2; // radians per second
