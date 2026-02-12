@@ -76,12 +76,36 @@ function removePlayer(id: string) {
 const keys: Record<string, boolean> = {};
 let inputSeq = 0;
 
+// Mouse delta accumulators (reset after each input send)
+let accumulatedDx = 0;
+let accumulatedDy = 0;
+
 window.addEventListener('keydown', (e) => {
   keys[e.key] = true;
 });
 window.addEventListener('keyup', (e) => {
   keys[e.key] = false;
 });
+
+// ---- Pointer Lock ----
+
+const canvas = renderer.domElement;
+
+canvas.addEventListener('click', () => {
+  canvas.requestPointerLock();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (document.pointerLockElement === canvas) {
+    accumulatedDx += e.movementX;
+    accumulatedDy += e.movementY;
+  }
+});
+
+// ---- Chase camera constants ----
+
+const CAM_DIST = 8;
+const CAM_HEIGHT = 3;
 
 // ---- WebSocket connection ----
 
@@ -108,18 +132,35 @@ ws.addEventListener('message', (event) => {
       if (!activeIds.has(id)) removePlayer(id);
     }
 
-    // Update positions
+    // Update positions and rotations
     for (const p of msg.players) {
       const mesh = getOrCreateMesh(p.id);
       mesh.position.set(p.x, p.y, p.z);
+      mesh.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
     }
 
-    // Follow the local player with the camera
+    // Chase camera follows the local player
     if (myPlayerId) {
       const me = msg.players.find((p: PlayerState) => p.id === myPlayerId);
       if (me) {
-        camera.position.set(me.x, me.y + 10, me.z + 10);
-        camera.lookAt(me.x, me.y, me.z);
+        // Forward vector (same formula as server)
+        const forwardX = -Math.sin(me.yaw) * Math.cos(me.pitch);
+        const forwardY = Math.sin(me.pitch);
+        const forwardZ = -Math.cos(me.yaw) * Math.cos(me.pitch);
+
+        // Camera behind the ship
+        camera.position.set(
+          me.x - forwardX * CAM_DIST,
+          me.y - forwardY * CAM_DIST + CAM_HEIGHT,
+          me.z - forwardZ * CAM_DIST,
+        );
+
+        // Look at a point ahead of the ship
+        camera.lookAt(
+          me.x + forwardX * 4,
+          me.y + forwardY * 4,
+          me.z + forwardZ * 4,
+        );
       }
     }
   }
@@ -137,8 +178,14 @@ setInterval(() => {
       type: MessageType.Input,
       seq: inputSeq++,
       keys: { ...keys },
+      mouseDx: accumulatedDx,
+      mouseDy: accumulatedDy,
     };
     ws.send(JSON.stringify(msg));
+
+    // Reset accumulators after sending
+    accumulatedDx = 0;
+    accumulatedDy = 0;
   }
 }, 1000 / TICK_RATE);
 
