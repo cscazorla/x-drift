@@ -1,0 +1,11 @@
+{
+  "name": "x-drift",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Online 3D space battle game",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ]
+}
