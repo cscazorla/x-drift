@@ -99,8 +99,11 @@ function tick() {
     player.mouseDy = 0;
 
     // 2. Apply roll from A/D (visual only — does not affect forward vector)
-    if (player.keys['a'] || player.keys['ArrowLeft']) player.roll += ROLL_SPEED * dt;
-    if (player.keys['d'] || player.keys['ArrowRight']) player.roll -= ROLL_SPEED * dt;
+    const rollingLeft = player.keys['a'] || player.keys['ArrowLeft'];
+    const rollingRight = player.keys['d'] || player.keys['ArrowRight'];
+    if (rollingLeft) player.roll += ROLL_SPEED * dt;
+    else if (rollingRight) player.roll -= ROLL_SPEED * dt;
+    else player.roll *= Math.pow(0.05, dt); // lerp toward 0
 
     // 3. Compute forward vector from yaw + pitch
     const forwardX = -Math.sin(player.yaw) * Math.cos(player.pitch);

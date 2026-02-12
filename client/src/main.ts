@@ -82,7 +82,7 @@ canvas.addEventListener('click', () => {
 document.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement === canvas) {
     accumulatedDx += e.movementX;
-    accumulatedDy += e.movementY;
+    accumulatedDy -= e.movementY;
   }
 });
 
