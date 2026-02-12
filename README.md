@@ -46,7 +46,7 @@ Client                             Server
 ──────                             ──────
 Captures input (keyboard)
   → sends via WebSocket →          Receives input from all players
-                                   Runs game loop (20 ticks/sec):
+                                   Runs game loop (60 ticks/sec):
                                      - Applies player inputs
                                      - Computes physics (positions, collisions)
                                      - Updates world state
@@ -100,3 +100,14 @@ All messages are JSON over WebSocket.
 |---------|--------|-------------|
 | `welcome` | `playerId` | Sent on connection, assigns a player ID |
 | `state` | `players[]` | World snapshot with all player positions |
+
+## Roadmap
+
+1. **3D movement with rotation** — Replace flat WASD sliding with full 3D flight: pitch, yaw, roll. The ship should move in the direction it faces.
+2. **Ship model** — Replace placeholder boxes with a ship-like shape built from Three.js geometries (no external 3D models yet).
+3. **Space environment** — Starfield background instead of the green grid. Make it feel like outer space.
+4. **Shooting** — Players fire projectiles. The server tracks them, computes trajectories, and detects collisions against other ships.
+5. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
+6. **HUD** — 2D overlay showing health, score, and connected players.
+7. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
+8. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
