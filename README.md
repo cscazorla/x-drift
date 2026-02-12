@@ -22,7 +22,9 @@ x-drift/
 ├── client/                # Browser client (Vite + Three.js)
 │   ├── index.html
 │   ├── src/
-│   │   └── main.ts        # Three.js renderer + WebSocket client
+│   │   ├── main.ts        # Three.js renderer + WebSocket client
+│   │   └── ship.ts        # Ship model factory (7-mesh X-wing shape)
+
 │   ├── package.json
 │   └── tsconfig.json
 ├── server/                # Authoritative game server (Node.js + ws)
@@ -117,7 +119,7 @@ All messages are JSON over WebSocket.
 ## Roadmap
 
 1. ~~**3D movement with rotation**~~ — Full 3D flight with mouse look (pointer lock), pitch/yaw, roll (A/D), acceleration-based thrust (W to accelerate, S to brake, coasting when no key pressed), chase camera, and a debug HUD showing position and speed.
-2. **Ship model** — Replace placeholder boxes with a ship-like shape built from Three.js geometries (no external 3D models yet).
+2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
 3. **Space environment** — Starfield background instead of the grid. Make it feel like outer space.
 4. **Shooting** — Players fire projectiles. The server tracks them, computes trajectories, and detects collisions against other ships.
 5. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.

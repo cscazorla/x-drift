@@ -7,6 +7,7 @@ import {
   type InputMessage,
   type PlayerState,
 } from '@x-drift/shared';
+import { getOrCreateShip, removeShip, getShipIds } from './ship';
 
 // ---- Three.js setup ----
 
@@ -50,34 +51,9 @@ debugBar.style.cssText =
   'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none';
 document.body.appendChild(debugBar);
 
-// ---- Player meshes ----
+// ---- Player state ----
 
-const playerMeshes = new Map<string, THREE.Mesh>();
 let myPlayerId: string | null = null;
-
-function getOrCreateMesh(id: string): THREE.Mesh {
-  let mesh = playerMeshes.get(id);
-  if (!mesh) {
-    const color = id === myPlayerId ? 0x00ff88 : 0xff4444;
-    mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 0.5, 1.5),
-      new THREE.MeshStandardMaterial({ color }),
-    );
-    scene.add(mesh);
-    playerMeshes.set(id, mesh);
-  }
-  return mesh;
-}
-
-function removePlayer(id: string) {
-  const mesh = playerMeshes.get(id);
-  if (mesh) {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    (mesh.material as THREE.Material).dispose();
-    playerMeshes.delete(id);
-  }
-}
 
 // ---- Input tracking ----
 
@@ -136,15 +112,15 @@ ws.addEventListener('message', (event) => {
     const activeIds = new Set(msg.players.map((p: PlayerState) => p.id));
 
     // Remove players that left
-    for (const id of playerMeshes.keys()) {
-      if (!activeIds.has(id)) removePlayer(id);
+    for (const id of getShipIds()) {
+      if (!activeIds.has(id)) removeShip(scene, id);
     }
 
     // Update positions and rotations
     for (const p of msg.players) {
-      const mesh = getOrCreateMesh(p.id);
-      mesh.position.set(p.x, p.y, p.z);
-      mesh.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
+      const ship = getOrCreateShip(scene, p.id, p.id === myPlayerId);
+      ship.position.set(p.x, p.y, p.z);
+      ship.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
     }
 
     // Chase camera follows the local player
