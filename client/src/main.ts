@@ -33,7 +33,7 @@ dirLight.position.set(5, 10, 5);
 scene.add(dirLight);
 
 // Grid for spatial reference
-scene.add(new THREE.GridHelper(50, 50, 0x004400, 0x002200));
+scene.add(new THREE.GridHelper(200, 200, 0x444444, 0x222222));
 
 // Handle window resize
 window.addEventListener('resize', () => {

@@ -44,7 +44,7 @@ The game uses an **authoritative server** model to prevent cheating:
 ```
 Client                             Server
 ──────                             ──────
-Captures input (keyboard)
+Captures input (keyboard + mouse)
   → sends via WebSocket →          Receives input from all players
                                    Runs game loop (60 ticks/sec):
                                      - Applies player inputs
@@ -84,6 +84,19 @@ npm run dev --workspace=client
 
 Open `http://localhost:5173` in your browser. You can open multiple tabs to simulate multiple players.
 
+## Controls
+
+| Input | Action |
+|-------|--------|
+| Click | Lock mouse pointer (enables look) |
+| Mouse | Yaw and pitch |
+| W / Arrow Up | Accelerate forward (max 10 u/s) |
+| S / Arrow Down | Brake (decelerate to 0, never reverses) |
+| A / Arrow Left | Roll left |
+| D / Arrow Right | Roll right |
+
+Releasing W keeps the current speed (no friction). A debug bar at the top of the screen shows position and speed.
+
 ## Protocol
 
 All messages are JSON over WebSocket.
@@ -92,20 +105,20 @@ All messages are JSON over WebSocket.
 
 | Message | Fields | Description |
 |---------|--------|-------------|
-| `input` | `seq`, `keys` | Currently pressed keys |
+| `input` | `seq`, `keys`, `mouseDx`, `mouseDy` | Currently pressed keys and accumulated mouse deltas |
 
 ### Server → Client
 
 | Message | Fields | Description |
 |---------|--------|-------------|
 | `welcome` | `playerId` | Sent on connection, assigns a player ID |
-| `state` | `players[]` | World snapshot with all player positions |
+| `state` | `players[]` | World snapshot with all player positions, rotations, and speed |
 
 ## Roadmap
 
-1. **3D movement with rotation** — Replace flat WASD sliding with full 3D flight: pitch, yaw, roll. The ship should move in the direction it faces.
+1. ~~**3D movement with rotation**~~ — Full 3D flight with mouse look (pointer lock), pitch/yaw, roll (A/D), acceleration-based thrust (W to accelerate, S to brake, coasting when no key pressed), chase camera, and a debug HUD showing position and speed.
 2. **Ship model** — Replace placeholder boxes with a ship-like shape built from Three.js geometries (no external 3D models yet).
-3. **Space environment** — Starfield background instead of the green grid. Make it feel like outer space.
+3. **Space environment** — Starfield background instead of the grid. Make it feel like outer space.
 4. **Shooting** — Players fire projectiles. The server tracks them, computes trajectories, and detects collisions against other ships.
 5. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
 6. **HUD** — 2D overlay showing health, score, and connected players.
