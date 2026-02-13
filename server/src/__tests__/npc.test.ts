@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { createNPC, createAllNPCs, updateNPCAI, type NPC } from '../npc.js';
+import { createNPC, createAllNPCs, updateNPCAI, respawnNPC, type NPC } from '../npc.js';
 import { updatePlayerMovement } from '../game.js';
 import {
+  MAX_HP,
   NPC_COUNT,
   NPC_MIN_SKILL,
   NPC_MAX_SKILL,
@@ -20,6 +21,7 @@ function makeNPC(overrides: Partial<NPC> = {}): NPC {
     x: 0, y: 0, z: 0,
     yaw: 0, pitch: 0, roll: 0,
     speed: 0,
+    hp: MAX_HP,
     keys: {},
     mouseDx: 0, mouseDy: 0,
     fire: false,
@@ -187,5 +189,36 @@ describe('NPC + updatePlayerMovement integration', () => {
     }
     expect(npc.pitch).toBeGreaterThanOrEqual(-MAX_PITCH);
     expect(npc.pitch).toBeLessThanOrEqual(MAX_PITCH);
+  });
+});
+
+// ---- respawnNPC ----
+
+describe('respawnNPC', () => {
+  it('resets hp to MAX_HP', () => {
+    const npc = makeNPC({ hp: 0 });
+    respawnNPC(npc);
+    expect(npc.hp).toBe(MAX_HP);
+  });
+
+  it('resets speed to 0', () => {
+    const npc = makeNPC({ speed: 5, hp: 0 });
+    respawnNPC(npc);
+    expect(npc.speed).toBe(0);
+  });
+
+  it('position changes (new random spawn)', () => {
+    const npc = makeNPC({ x: 0, y: 0, z: 0, hp: 0 });
+    respawnNPC(npc);
+    // Very unlikely all three stay exactly 0
+    const dist = Math.sqrt(npc.x ** 2 + npc.y ** 2 + npc.z ** 2);
+    expect(dist).toBeGreaterThan(0);
+  });
+
+  it('keeps same id and skill', () => {
+    const npc = makeNPC({ id: 'npc-42', skill: 0.7, hp: 0 });
+    respawnNPC(npc);
+    expect(npc.id).toBe('npc-42');
+    expect(npc.skill).toBe(0.7);
   });
 });

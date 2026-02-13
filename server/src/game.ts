@@ -12,6 +12,7 @@ import {
   PROJECTILE_HIT_RADIUS,
   MAX_PROJECTILES_PER_PLAYER,
   type HitMessage,
+  type KillMessage,
 } from '@x-drift/shared';
 
 // ---- Types ----
@@ -38,6 +39,7 @@ export interface PlayerLike {
   pitch: number;
   roll: number;
   speed: number;
+  hp: number;
   keys: Record<string, boolean>;
   mouseDx: number;
   mouseDy: number;
@@ -161,6 +163,7 @@ export function detectCollisions(
         hits.push({
           type: MessageType.Hit,
           targetId: target.id,
+          attackerId: p.ownerId,
           projectileId: p.id,
           x: p.x,
           y: p.y,
@@ -175,4 +178,37 @@ export function detectCollisions(
     }
   }
   return { survivors, hits };
+}
+
+/**
+ * Apply damage from hit messages to entities. Returns KillMessages for any
+ * entities whose hp reaches 0. Skips already-dead entities.
+ */
+export function applyDamage(
+  hits: HitMessage[],
+  entities: Map<string, PlayerLike> | PlayerLike[],
+): KillMessage[] {
+  const kills: KillMessage[] = [];
+  const lookup = entities instanceof Map
+    ? entities
+    : new Map(Array.from(entities as PlayerLike[], (e) => [e.id, e]));
+
+  for (const hit of hits) {
+    const target = lookup.get(hit.targetId);
+    if (!target || target.hp <= 0) continue;
+
+    target.hp -= 1;
+    if (target.hp <= 0) {
+      target.speed = 0;
+      kills.push({
+        type: MessageType.Kill,
+        targetId: hit.targetId,
+        attackerId: hit.attackerId,
+        x: target.x,
+        y: target.y,
+        z: target.z,
+      });
+    }
+  }
+  return kills;
 }

@@ -3,6 +3,7 @@ import {
   MessageType,
   SERVER_PORT,
   TICK_RATE,
+  RESPAWN_TIME,
   type ServerMessage,
   type InputMessage,
   type PlayerState,
@@ -11,7 +12,8 @@ import { getOrCreateShip, removeShip, getShipIds } from './ship';
 import { createStarfield } from './starfield';
 import { createCelestialBodies } from './celestial';
 import { updateProjectiles } from './projectile';
-import { triggerHitFlash, updateHitFlashes } from './hitEffect';
+import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
+import { addKillEntry } from './killFeed';
 
 // ---- Three.js setup ----
 
@@ -55,9 +57,27 @@ debugBar.style.cssText =
   'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none';
 document.body.appendChild(debugBar);
 
+// ---- Death overlay ----
+
+const deathOverlay = document.createElement('div');
+deathOverlay.style.cssText =
+  'position:fixed;top:0;left:0;width:100%;height:100%;display:none;' +
+  'justify-content:center;align-items:center;flex-direction:column;' +
+  'background:rgba(0,0,0,0.5);z-index:999;pointer-events:none';
+const deathTitle = document.createElement('div');
+deathTitle.style.cssText = 'color:#ff4444;font:bold 48px monospace;margin-bottom:16px';
+deathTitle.textContent = 'DESTROYED';
+const deathCountdown = document.createElement('div');
+deathCountdown.style.cssText = 'color:#ccc;font:24px monospace';
+deathOverlay.appendChild(deathTitle);
+deathOverlay.appendChild(deathCountdown);
+document.body.appendChild(deathOverlay);
+
 // ---- Player state ----
 
 let myPlayerId: string | null = null;
+let localDead = false;
+let respawnCountdown = 0;
 
 // ---- Input tracking ----
 
@@ -138,6 +158,9 @@ ws.addEventListener('message', (event) => {
       const ship = getOrCreateShip(scene, p.id, p.id === myPlayerId);
       ship.position.set(p.x, p.y, p.z);
       ship.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
+      // Manage visibility based on hp (death explosion handles its own hiding)
+      if (p.hp > 0) ship.visible = true;
+      else if (p.hp <= 0) ship.visible = false;
     }
 
     // Update projectile meshes
@@ -147,37 +170,58 @@ ws.addEventListener('message', (event) => {
     if (myPlayerId) {
       const me = msg.players.find((p: PlayerState) => p.id === myPlayerId);
       if (me) {
-        // Forward vector (same formula as server)
-        const forwardX = -Math.sin(me.yaw) * Math.cos(me.pitch);
-        const forwardY = Math.sin(me.pitch);
-        const forwardZ = -Math.cos(me.yaw) * Math.cos(me.pitch);
+        // Detect respawn: was dead, now alive
+        if (localDead && me.hp > 0) {
+          localDead = false;
+          respawnCountdown = 0;
+          deathOverlay.style.display = 'none';
+        }
 
-        // Camera behind the ship
-        camera.position.set(
-          me.x - forwardX * CAM_DIST,
-          me.y - forwardY * CAM_DIST + CAM_HEIGHT,
-          me.z - forwardZ * CAM_DIST,
-        );
+        // Only update camera if alive (freeze when dead)
+        if (me.hp > 0) {
+          // Forward vector (same formula as server)
+          const forwardX = -Math.sin(me.yaw) * Math.cos(me.pitch);
+          const forwardY = Math.sin(me.pitch);
+          const forwardZ = -Math.cos(me.yaw) * Math.cos(me.pitch);
 
-        // Look at a point ahead of the ship
-        camera.lookAt(
-          me.x + forwardX * 4,
-          me.y + forwardY * 4,
-          me.z + forwardZ * 4,
-        );
+          // Camera behind the ship
+          camera.position.set(
+            me.x - forwardX * CAM_DIST,
+            me.y - forwardY * CAM_DIST + CAM_HEIGHT,
+            me.z - forwardZ * CAM_DIST,
+          );
+
+          // Look at a point ahead of the ship
+          camera.lookAt(
+            me.x + forwardX * 4,
+            me.y + forwardY * 4,
+            me.z + forwardZ * 4,
+          );
+        }
 
         // Keep starfield centred on camera
         stars.position.copy(camera.position);
 
         // Update debug bar
         debugBar.textContent =
-          `pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
+          `hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
       }
     }
   }
 
   if (msg.type === MessageType.Hit) {
     triggerHitFlash(msg.targetId);
+  }
+
+  if (msg.type === MessageType.Kill) {
+    triggerDeathExplosion(msg.targetId);
+    addKillEntry(msg.attackerId, msg.targetId, myPlayerId);
+    if (msg.targetId === myPlayerId) {
+      localDead = true;
+      respawnCountdown = RESPAWN_TIME;
+      deathOverlay.style.display = 'flex';
+      deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
+    }
   }
 });
 
@@ -189,13 +233,15 @@ ws.addEventListener('close', () => {
 
 setInterval(() => {
   if (ws.readyState === WebSocket.OPEN) {
+    // Suppress input when dead
+    const dead = localDead;
     const msg: InputMessage = {
       type: MessageType.Input,
       seq: inputSeq++,
-      keys: { ...keys },
-      mouseDx: accumulatedDx,
-      mouseDy: accumulatedDy,
-      fire: fireIntent,
+      keys: dead ? {} : { ...keys },
+      mouseDx: dead ? 0 : accumulatedDx,
+      mouseDy: dead ? 0 : accumulatedDy,
+      fire: dead ? false : fireIntent,
     };
     ws.send(JSON.stringify(msg));
 
@@ -214,6 +260,13 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   updateHitFlashes(dt);
+
+  // Update death countdown
+  if (localDead && respawnCountdown > 0) {
+    respawnCountdown -= dt;
+    deathCountdown.textContent = `Respawning in ${Math.max(1, Math.ceil(respawnCountdown))}s`;
+  }
+
   renderer.render(scene, camera);
 }
 

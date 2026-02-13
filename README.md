@@ -28,14 +28,15 @@ x-drift/
 │   │   ├── starfield.ts   # Particle-based starfield that follows the camera
 │   │   ├── celestial.ts   # Sun and planet renderer from server data
 │   │   ├── projectile.ts  # Projectile beam renderer (synced from server state)
-│   │   └── hitEffect.ts   # Hit flash effect on damaged ships
+│   │   ├── hitEffect.ts   # Hit flash + death explosion effects
+│   │   └── killFeed.ts    # DOM-based kill feed overlay (top-right)
 
 │   ├── package.json
 │   └── tsconfig.json
 ├── server/                # Authoritative game server (Node.js + ws)
 │   ├── src/
 │   │   ├── index.ts       # WebSocket server + game loop
-│   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions)
+│   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions, damage)
 │   │   ├── npc.ts         # NPC ship AI (wander behavior, input simulation)
 │   │   └── __tests__/
 │   │       ├── game.test.ts
@@ -85,10 +86,13 @@ sequenceDiagram
     Note over C,S: Game Loop (60 Hz)
     loop Every tick (~16ms)
         C->>S: input { keys, mouseDx, mouseDy, fire }
-        Note right of S: Apply inputs<br/>Update NPC AI<br/>Update positions<br/>Spawn projectiles<br/>Move projectiles<br/>Detect collisions
-        S->>C: state { players[], projectiles[] }
+        Note right of S: Apply inputs (skip dead)<br/>Update NPC AI (skip dead)<br/>Update positions<br/>Spawn projectiles (skip dead)<br/>Move projectiles<br/>Detect collisions (alive only)<br/>Apply damage / kills<br/>Respawn timers
+        S->>C: state { players[] (incl. hp), projectiles[] }
         opt Projectile hit a ship
-            S->>C: hit { targetId, projectileId, x, y, z }
+            S->>C: hit { targetId, attackerId, projectileId, x, y, z }
+        end
+        opt Ship destroyed (hp reached 0)
+            S->>C: kill { targetId, attackerId, x, y, z }
         end
     end
 
@@ -142,7 +146,7 @@ npm test --workspace=server
 | D / Arrow Right | Roll right |
 | Left click (while locked) | Fire projectile (~3 shots/sec) |
 
-Releasing W keeps the current speed (no friction). A debug bar at the top of the screen shows position and speed.
+Releasing W keeps the current speed (no friction). A debug bar at the top of the screen shows HP, position, and speed.
 
 ## Protocol
 
@@ -159,18 +163,19 @@ All messages are JSON over WebSocket.
 | Message | Fields | Description |
 |---------|--------|-------------|
 | `welcome` | `playerId`, `celestialBodies[]` | Sent on connection, assigns a player ID and world geometry |
-| `state` | `players[]`, `projectiles[]` | World snapshot with all player and projectile positions |
-| `hit` | `targetId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
+| `state` | `players[]` (incl. `hp`), `projectiles[]` | World snapshot with all player and projectile positions |
+| `hit` | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
+| `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
 
 ## Roadmap
 
 1. ~~**3D movement with rotation**~~ — Full 3D flight with mouse look (pointer lock), pitch/yaw, roll (A/D), acceleration-based thrust (W to accelerate, S to brake, coasting when no key pressed), chase camera, and a debug HUD showing position and speed.
 2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
 3. ~~**Space environment**~~ — Starfield background, server-defined sun (with glow and point light) and planets (with optional rings) as spatial reference points.
-4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit. No HP yet.
+4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit.
 5. ~~**NPC ships**~~ — Server-controlled NPC ships that wander randomly at skill-dependent speeds. NPCs reuse the `PlayerLike` interface — AI simulates input each tick, then existing physics runs unchanged. Appear as red ships to all players.
-6. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
-7. **HUD** — 2D overlay showing health, score, and connected players.
+6. ~~**Health and eliminations**~~ — Ships have 4 HP. Each hit deals 1 damage. At 0 HP: death explosion (white flash + scale-up), kill feed entry, and respawn after 5 seconds. Dead ships freeze and become invisible. The local player sees a "DESTROYED" overlay with countdown. Both players and NPCs have health and respawn.
+7. **HUD** — 2D overlay showing score and connected players.
 8. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
 9. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
 10. **NPC combat** — NPCs target and shoot at nearby players.

@@ -1,4 +1,5 @@
 import {
+  MAX_HP,
   MAX_SPEED,
   MOUSE_SENSITIVITY,
   NPC_COUNT,
@@ -35,6 +36,7 @@ export function createNPC(id: string): NPC {
     pitch: 0,
     roll: 0,
     speed: 0,
+    hp: MAX_HP,
     keys: {},
     mouseDx: 0,
     mouseDy: 0,
@@ -53,6 +55,23 @@ export function createAllNPCs(): NPC[] {
     npcs.push(createNPC(`npc-${i}`));
   }
   return npcs;
+}
+
+/** Reset an NPC to a fresh spawn state (new position, full hp). Keeps id and skill. */
+export function respawnNPC(npc: NPC): void {
+  const spawnAngle = Math.random() * 2 * Math.PI;
+  const spawnRadius = 30 + Math.random() * 50;
+  npc.x = Math.cos(spawnAngle) * spawnRadius;
+  npc.y = (Math.random() - 0.5) * 40;
+  npc.z = Math.sin(spawnAngle) * spawnRadius;
+  npc.hp = MAX_HP;
+  npc.speed = 0;
+  npc.yaw = Math.random() * 2 * Math.PI;
+  npc.pitch = 0;
+  npc.roll = 0;
+  npc.targetYaw = Math.random() * 2 * Math.PI;
+  npc.targetPitch = (Math.random() - 0.5) * 0.5;
+  npc.wanderTimer = NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
 }
 
 // ---- AI logic ----

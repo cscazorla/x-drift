@@ -1,13 +1,27 @@
 import { describe, it, expect } from 'vitest';
+import { MAX_HP, type HitMessage } from '@x-drift/shared';
 import {
   computeForward,
   updatePlayerMovement,
   spawnProjectile,
   moveProjectiles,
   detectCollisions,
+  applyDamage,
   type PlayerLike,
   type Projectile,
 } from '../game.js';
+
+/** Helper to create a HitMessage for tests (avoids const enum issues with isolatedModules). */
+function makeHit(overrides: Partial<Omit<HitMessage, 'type'>> = {}): HitMessage {
+  return {
+    type: 'hit' as unknown as HitMessage['type'],
+    targetId: 'p1',
+    attackerId: 'p2',
+    projectileId: 1,
+    x: 0, y: 0, z: 0,
+    ...overrides,
+  };
+}
 
 // Helper: create a default player at the origin with no input
 function makePlayer(overrides: Partial<PlayerLike> = {}): PlayerLike {
@@ -16,6 +30,7 @@ function makePlayer(overrides: Partial<PlayerLike> = {}): PlayerLike {
     x: 0, y: 0, z: 0,
     yaw: 0, pitch: 0, roll: 0,
     speed: 0,
+    hp: MAX_HP,
     keys: {},
     mouseDx: 0, mouseDy: 0,
     fire: false,
@@ -288,5 +303,54 @@ describe('detectCollisions', () => {
     const target = { id: 'b', x: 1, y: 0, z: 0 };
     const { hits } = detectCollisions([proj], [target]);
     expect(hits).toHaveLength(1);
+  });
+
+  it('HitMessage includes attackerId matching projectile owner', () => {
+    const proj = makeProjectile({ ownerId: 'attacker', x: 0, y: 0, z: 0 });
+    const target = { id: 'target', x: 0.5, y: 0, z: 0 };
+    const { hits } = detectCollisions([proj], [target]);
+    expect(hits[0].attackerId).toBe('attacker');
+  });
+});
+
+// ---- applyDamage ----
+
+describe('applyDamage', () => {
+  it('hit reduces hp by 1', () => {
+    const player = makePlayer({ id: 'p1', hp: 4 });
+    applyDamage([makeHit()], [player]);
+    expect(player.hp).toBe(3);
+  });
+
+  it('kill when hp reaches 0 — returns KillMessage', () => {
+    const player = makePlayer({ id: 'p1', hp: 1 });
+    const kills = applyDamage([makeHit()], [player]);
+    expect(kills).toHaveLength(1);
+    expect(kills[0].targetId).toBe('p1');
+    expect(kills[0].attackerId).toBe('p2');
+  });
+
+  it('already-dead entity (hp=0) not damaged further', () => {
+    const player = makePlayer({ id: 'p1', hp: 0 });
+    const kills = applyDamage([makeHit()], [player]);
+    expect(kills).toHaveLength(0);
+    expect(player.hp).toBe(0);
+  });
+
+  it('multiple hits on same target in one tick — only first kills', () => {
+    const player = makePlayer({ id: 'p1', hp: 1 });
+    const hits = [
+      makeHit({ attackerId: 'p2', projectileId: 1 }),
+      makeHit({ attackerId: 'p3', projectileId: 2 }),
+    ];
+    const kills = applyDamage(hits, [player]);
+    expect(kills).toHaveLength(1);
+    expect(kills[0].attackerId).toBe('p2');
+  });
+
+  it('speed set to 0 on death', () => {
+    const player = makePlayer({ id: 'p1', hp: 1, speed: 5 });
+    applyDamage([makeHit()], [player]);
+    expect(player.speed).toBe(0);
   });
 });

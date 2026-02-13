@@ -9,6 +9,8 @@ export const enum MessageType {
   Welcome = 'welcome',
   /** Server → Client: a projectile hit a ship */
   Hit = 'hit',
+  /** Server → Client: a ship was destroyed */
+  Kill = 'kill',
 }
 
 // ---- Client → Server messages ----
@@ -73,6 +75,7 @@ export interface PlayerState {
   pitch: number;
   roll: number;
   speed: number;
+  hp: number;
 }
 
 export interface StateMessage {
@@ -84,13 +87,23 @@ export interface StateMessage {
 export interface HitMessage {
   type: MessageType.Hit;
   targetId: string;
+  attackerId: string;
   projectileId: number;
   x: number;
   y: number;
   z: number;
 }
 
-export type ServerMessage = WelcomeMessage | StateMessage | HitMessage;
+export interface KillMessage {
+  type: MessageType.Kill;
+  targetId: string;
+  attackerId: string;
+  x: number;
+  y: number;
+  z: number;
+}
+
+export type ServerMessage = WelcomeMessage | StateMessage | HitMessage | KillMessage;
 export type ClientMessage = InputMessage;
 
 // ---- Constants ----
@@ -110,6 +123,10 @@ export const PROJECTILE_LIFETIME = 3; // seconds
 export const FIRE_COOLDOWN = 0.3; // seconds
 export const PROJECTILE_HIT_RADIUS = 1; // units
 export const MAX_PROJECTILES_PER_PLAYER = 10;
+
+// Health / respawn constants
+export const MAX_HP = 4;
+export const RESPAWN_TIME = 5; // seconds
 
 // NPC constants
 export const NPC_COUNT = 50;

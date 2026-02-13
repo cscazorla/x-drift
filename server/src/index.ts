@@ -4,12 +4,15 @@ import {
   SERVER_PORT,
   TICK_RATE,
   FIRE_COOLDOWN,
+  MAX_HP,
+  RESPAWN_TIME,
   type CelestialBody,
   type ClientMessage,
   type PlayerState,
   type ProjectileState,
   type StateMessage,
   type HitMessage,
+  type KillMessage,
   type WelcomeMessage,
 } from '@x-drift/shared';
 import {
@@ -18,8 +21,9 @@ import {
   spawnProjectile,
   moveProjectiles,
   detectCollisions,
+  applyDamage,
 } from './game.js';
-import { type NPC, createAllNPCs, updateNPCAI } from './npc.js';
+import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
 
 // ---- Celestial bodies ----
 
@@ -58,11 +62,13 @@ interface Player {
   pitch: number;
   roll: number;
   speed: number;
+  hp: number;
   keys: Record<string, boolean>;
   mouseDx: number;
   mouseDy: number;
   fire: boolean;
   fireCooldown: number;
+  respawnTimer: number;
 }
 
 // ---- State ----
@@ -73,13 +79,11 @@ let nextProjectileId = 1;
 const players = new Map<string, Player>();
 let nextId = 1;
 const npcs: NPC[] = createAllNPCs();
+const npcRespawnTimers = new Map<string, number>();
 
-// ---- WebSocket server ----
+// ---- Helpers ----
 
-const wss = new WebSocketServer({ port: SERVER_PORT });
-
-wss.on('connection', (ws) => {
-  const id = String(nextId++);
+function randomSpawnPosition(): { x: number; y: number; z: number; yaw: number; pitch: number } {
   const spawnAngle = Math.random() * 2 * Math.PI;
   const spawnRadius = 30 + Math.random() * 50;
   const sx = Math.cos(spawnAngle) * spawnRadius;
@@ -90,21 +94,33 @@ wss.on('connection', (ws) => {
   const dy = (sun?.y ?? 0) - sy;
   const dz = (sun?.z ?? 0) - sz;
   const dist = Math.sqrt(dx * dx + dz * dz);
+  return { x: sx, y: sy, z: sz, yaw: Math.atan2(-dx, -dz), pitch: Math.atan2(dy, dist) };
+}
+
+// ---- WebSocket server ----
+
+const wss = new WebSocketServer({ port: SERVER_PORT });
+
+wss.on('connection', (ws) => {
+  const id = String(nextId++);
+  const spawn = randomSpawnPosition();
   const player: Player = {
     id,
     ws,
-    x: sx,
-    y: sy,
-    z: sz,
-    yaw: Math.atan2(-dx, -dz),
-    pitch: Math.atan2(dy, dist),
+    x: spawn.x,
+    y: spawn.y,
+    z: spawn.z,
+    yaw: spawn.yaw,
+    pitch: spawn.pitch,
     roll: 0,
     speed: 0,
+    hp: MAX_HP,
     keys: {},
     mouseDx: 0,
     mouseDy: 0,
     fire: false,
     fireCooldown: 0,
+    respawnTimer: 0,
   };
   players.set(id, player);
 
@@ -145,20 +161,23 @@ const dt = 1 / TICK_RATE;
 function tick() {
   // --- Simulation phase ---
 
-  // Apply accumulated input (mouse look, keys) and advance each player's position
+  // 1. Movement: skip dead entities
   for (const player of players.values()) {
-    updatePlayerMovement(player, dt);
+    if (player.hp > 0) updatePlayerMovement(player, dt);
   }
 
-  // Update NPC AI then apply movement physics
+  // 2. NPC AI: skip dead NPCs
   for (const npc of npcs) {
-    updateNPCAI(npc, dt);
-    updatePlayerMovement(npc, dt);
+    if (npc.hp > 0) {
+      updateNPCAI(npc, dt);
+      updatePlayerMovement(npc, dt);
+    }
   }
 
-  // Spawn projectiles
+  // 3. Spawn projectiles: skip dead players
   for (const player of players.values()) {
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
+    if (player.hp <= 0) { player.fire = false; continue; }
     const count = projectiles.filter((p) => p.ownerId === player.id).length;
     const proj = spawnProjectile(player, count, nextProjectileId);
     if (proj) {
@@ -172,15 +191,60 @@ function tick() {
   // Move projectiles & expire
   projectiles = moveProjectiles(projectiles, dt);
 
-  // Collision detection (includes NPCs as targets)
+  // 4. Collision detection: only alive entities as targets
   const allEntities = [...players.values(), ...npcs];
-  const targets = allEntities.map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z }));
-  const { survivors, hits } = detectCollisions(projectiles, targets);
+  const aliveTargets = allEntities
+    .filter((p) => p.hp > 0)
+    .map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z }));
+  const { survivors, hits } = detectCollisions(projectiles, aliveTargets);
   projectiles = survivors;
 
+  // 5. Apply damage → get kills
+  const kills = applyDamage(hits, allEntities);
+
+  // Set respawn timers for newly killed entities
+  for (const kill of kills) {
+    const player = players.get(kill.targetId);
+    if (player) {
+      player.respawnTimer = RESPAWN_TIME;
+    } else {
+      npcRespawnTimers.set(kill.targetId, RESPAWN_TIME);
+    }
+  }
+
+  // 6. Respawn timers
+  for (const player of players.values()) {
+    if (player.hp <= 0 && player.respawnTimer > 0) {
+      player.respawnTimer -= dt;
+      if (player.respawnTimer <= 0) {
+        const spawn = randomSpawnPosition();
+        player.x = spawn.x;
+        player.y = spawn.y;
+        player.z = spawn.z;
+        player.yaw = spawn.yaw;
+        player.pitch = spawn.pitch;
+        player.roll = 0;
+        player.speed = 0;
+        player.hp = MAX_HP;
+        player.respawnTimer = 0;
+      }
+    }
+  }
+
+  for (const npc of npcs) {
+    const timer = npcRespawnTimers.get(npc.id);
+    if (timer !== undefined && timer > 0) {
+      const remaining = timer - dt;
+      if (remaining <= 0) {
+        respawnNPC(npc);
+        npcRespawnTimers.delete(npc.id);
+      } else {
+        npcRespawnTimers.set(npc.id, remaining);
+      }
+    }
+  }
+
   // --- Broadcast phase ---
-  // Always: send a `state` message with every player's position/rotation and every live projectile.
-  // Conditionally: if any collisions happened, also send a `hit` message per collision.
 
   const playerStates: PlayerState[] = [];
   for (const p of allEntities) {
@@ -193,6 +257,7 @@ function tick() {
       pitch: p.pitch,
       roll: p.roll,
       speed: p.speed,
+      hp: p.hp,
     });
   }
 
@@ -214,13 +279,16 @@ function tick() {
   };
   const payload = JSON.stringify(stateMsg);
   const hitPayloads = hits.map((h) => JSON.stringify(h));
+  const killPayloads = kills.map((k) => JSON.stringify(k));
 
-  // Send to all connected clients: state first, then any hit events
   for (const player of players.values()) {
     if (player.ws.readyState === WebSocket.OPEN) {
       player.ws.send(payload);
       for (const hp of hitPayloads) {
         player.ws.send(hp);
+      }
+      for (const kp of killPayloads) {
+        player.ws.send(kp);
       }
     }
   }
