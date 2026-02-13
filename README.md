@@ -36,8 +36,10 @@ x-drift/
 │   ├── src/
 │   │   ├── index.ts       # WebSocket server + game loop
 │   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions)
+│   │   ├── npc.ts         # NPC ship AI (wander behavior, input simulation)
 │   │   └── __tests__/
-│   │       └── game.test.ts
+│   │       ├── game.test.ts
+│   │       └── npc.test.ts
 │   ├── vitest.config.ts
 │   ├── package.json
 │   └── tsconfig.json
@@ -59,6 +61,7 @@ Captures input (keyboard + mouse)
   → sends via WebSocket →          Receives input from all players
                                    Runs game loop (60 ticks/sec):
                                      - Applies player inputs
+                                     - Updates NPC AI (simulates inputs)
                                      - Computes physics (positions, collisions)
                                      - Updates world state
   ← receives via WebSocket ←      Broadcasts state snapshot to each client
@@ -82,7 +85,7 @@ sequenceDiagram
     Note over C,S: Game Loop (60 Hz)
     loop Every tick (~16ms)
         C->>S: input { keys, mouseDx, mouseDy, fire }
-        Note right of S: Apply inputs<br/>Update positions<br/>Spawn projectiles<br/>Move projectiles<br/>Detect collisions
+        Note right of S: Apply inputs<br/>Update NPC AI<br/>Update positions<br/>Spawn projectiles<br/>Move projectiles<br/>Detect collisions
         S->>C: state { players[], projectiles[] }
         opt Projectile hit a ship
             S->>C: hit { targetId, projectileId, x, y, z }
@@ -165,7 +168,9 @@ All messages are JSON over WebSocket.
 2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
 3. ~~**Space environment**~~ — Starfield background, server-defined sun (with glow and point light) and planets (with optional rings) as spatial reference points.
 4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit. No HP yet.
-5. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
-6. **HUD** — 2D overlay showing health, score, and connected players.
-7. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
-8. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
+5. ~~**NPC ships**~~ — Server-controlled NPC ships that wander randomly at skill-dependent speeds. NPCs reuse the `PlayerLike` interface — AI simulates input each tick, then existing physics runs unchanged. Appear as red ships to all players.
+6. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
+7. **HUD** — 2D overlay showing health, score, and connected players.
+8. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
+9. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
+10. **NPC combat** — NPCs target and shoot at nearby players.

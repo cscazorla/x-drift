@@ -110,3 +110,11 @@ export const PROJECTILE_LIFETIME = 3; // seconds
 export const FIRE_COOLDOWN = 0.3; // seconds
 export const PROJECTILE_HIT_RADIUS = 1; // units
 export const MAX_PROJECTILES_PER_PLAYER = 10;
+
+// NPC constants
+export const NPC_COUNT = 50;
+export const NPC_TURN_RATE = 400;           // max mouse-delta units for steering
+export const NPC_WANDER_INTERVAL_MIN = 2;   // seconds
+export const NPC_WANDER_INTERVAL_MAX = 5;   // seconds
+export const NPC_MIN_SKILL = 0.3;
+export const NPC_MAX_SKILL = 1.0;

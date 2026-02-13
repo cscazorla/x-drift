@@ -19,6 +19,7 @@ import {
   moveProjectiles,
   detectCollisions,
 } from './game.js';
+import { type NPC, createAllNPCs, updateNPCAI } from './npc.js';
 
 // ---- Celestial bodies ----
 
@@ -71,6 +72,7 @@ let nextProjectileId = 1;
 
 const players = new Map<string, Player>();
 let nextId = 1;
+const npcs: NPC[] = createAllNPCs();
 
 // ---- WebSocket server ----
 
@@ -148,6 +150,12 @@ function tick() {
     updatePlayerMovement(player, dt);
   }
 
+  // Update NPC AI then apply movement physics
+  for (const npc of npcs) {
+    updateNPCAI(npc, dt);
+    updatePlayerMovement(npc, dt);
+  }
+
   // Spawn projectiles
   for (const player of players.values()) {
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
@@ -164,8 +172,9 @@ function tick() {
   // Move projectiles & expire
   projectiles = moveProjectiles(projectiles, dt);
 
-  // Collision detection
-  const targets = [...players.values()].map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z }));
+  // Collision detection (includes NPCs as targets)
+  const allEntities = [...players.values(), ...npcs];
+  const targets = allEntities.map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z }));
   const { survivors, hits } = detectCollisions(projectiles, targets);
   projectiles = survivors;
 
@@ -174,7 +183,7 @@ function tick() {
   // Conditionally: if any collisions happened, also send a `hit` message per collision.
 
   const playerStates: PlayerState[] = [];
-  for (const p of players.values()) {
+  for (const p of allEntities) {
     playerStates.push({
       id: p.id,
       x: p.x,
