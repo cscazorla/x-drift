@@ -23,7 +23,9 @@ x-drift/
 │   ├── index.html
 │   ├── src/
 │   │   ├── main.ts        # Three.js renderer + WebSocket client
-│   │   └── ship.ts        # Ship model factory (7-mesh X-wing shape)
+│   │   ├── ship.ts        # Ship model factory (7-mesh X-wing shape)
+│   │   ├── starfield.ts   # Particle-based starfield that follows the camera
+│   │   └── celestial.ts   # Sun and planet renderer from server data
 
 │   ├── package.json
 │   └── tsconfig.json
@@ -113,14 +115,14 @@ All messages are JSON over WebSocket.
 
 | Message | Fields | Description |
 |---------|--------|-------------|
-| `welcome` | `playerId` | Sent on connection, assigns a player ID |
+| `welcome` | `playerId`, `celestialBodies[]` | Sent on connection, assigns a player ID and world geometry |
 | `state` | `players[]` | World snapshot with all player positions, rotations, and speed |
 
 ## Roadmap
 
 1. ~~**3D movement with rotation**~~ — Full 3D flight with mouse look (pointer lock), pitch/yaw, roll (A/D), acceleration-based thrust (W to accelerate, S to brake, coasting when no key pressed), chase camera, and a debug HUD showing position and speed.
 2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
-3. **Space environment** — Starfield background instead of the grid. Make it feel like outer space.
+3. ~~**Space environment**~~ — Starfield background, server-defined sun (with glow and point light) and planets (with optional rings) as spatial reference points.
 4. **Shooting** — Players fire projectiles. The server tracks them, computes trajectories, and detects collisions against other ships.
 5. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
 6. **HUD** — 2D overlay showing health, score, and connected players.

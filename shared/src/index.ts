@@ -22,11 +22,29 @@ export interface InputMessage {
   mouseDy: number;
 }
 
+// ---- Celestial bodies ----
+
+export interface CelestialBody {
+  type: 'sun' | 'planet';
+  x: number;
+  y: number;
+  z: number;
+  radius: number;
+  color: number;
+  emissive?: number;
+  ring?: {
+    innerRadius: number;
+    outerRadius: number;
+    color: number;
+  };
+}
+
 // ---- Server → Client messages ----
 
 export interface WelcomeMessage {
   type: MessageType.Welcome;
   playerId: string;
+  celestialBodies: CelestialBody[];
 }
 
 export interface PlayerState {

@@ -9,11 +9,37 @@ import {
   MOUSE_SENSITIVITY,
   MAX_PITCH,
   ROLL_SPEED,
+  type CelestialBody,
   type ClientMessage,
   type PlayerState,
   type StateMessage,
   type WelcomeMessage,
 } from '@x-drift/shared';
+
+// ---- Celestial bodies ----
+
+const celestialBodies: CelestialBody[] = [
+  {
+    type: 'sun',
+    x: 300, y: 80, z: -200,
+    radius: 30,
+    color: 0xffaa00,
+    emissive: 0xffdd44,
+  },
+  {
+    type: 'planet',
+    x: -250, y: -30, z: 150,
+    radius: 12,
+    color: 0x4477aa,
+  },
+  {
+    type: 'planet',
+    x: 100, y: 50, z: -350,
+    radius: 18,
+    color: 0xcc8844,
+    ring: { innerRadius: 24, outerRadius: 34, color: 0xddaa66 },
+  },
+];
 
 // ---- Player tracking ----
 
@@ -58,7 +84,7 @@ wss.on('connection', (ws) => {
   };
   players.set(id, player);
 
-  const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id };
+  const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id, celestialBodies };
   ws.send(JSON.stringify(welcome));
 
   console.log(`Player ${id} connected (${players.size} online)`);

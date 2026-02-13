@@ -8,6 +8,8 @@ import {
   type PlayerState,
 } from '@x-drift/shared';
 import { getOrCreateShip, removeShip, getShipIds } from './ship';
+import { createStarfield } from './starfield';
+import { createCelestialBodies } from './celestial';
 
 // ---- Three.js setup ----
 
@@ -28,13 +30,13 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Basic lighting
-scene.add(new THREE.AmbientLight(0x404040));
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(5, 10, 5);
+scene.add(new THREE.AmbientLight(0x202020));
+const dirLight = new THREE.DirectionalLight(0xfff5e6, 1);
+dirLight.position.set(50, 30, 50);
 scene.add(dirLight);
 
-// Grid for spatial reference
-scene.add(new THREE.GridHelper(200, 200, 0x444444, 0x222222));
+// Starfield (follows camera so stars appear infinitely far)
+const stars = createStarfield(scene);
 
 // Handle window resize
 window.addEventListener('resize', () => {
@@ -104,6 +106,10 @@ ws.addEventListener('message', (event) => {
 
   if (msg.type === MessageType.Welcome) {
     myPlayerId = msg.playerId;
+    const sunPos = createCelestialBodies(scene, msg.celestialBodies);
+    if (sunPos) {
+      dirLight.position.copy(sunPos);
+    }
     console.log(`Joined as player ${myPlayerId}`);
     return;
   }
@@ -145,6 +151,9 @@ ws.addEventListener('message', (event) => {
           me.y + forwardY * 4,
           me.z + forwardZ * 4,
         );
+
+        // Keep starfield centred on camera
+        stars.position.copy(camera.position);
 
         // Update debug bar
         debugBar.textContent =
