@@ -38,7 +38,7 @@ x-drift/
 │   ├── src/
 │   │   ├── index.ts       # WebSocket server + game loop
 │   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions, damage)
-│   │   ├── npc.ts         # NPC ship AI (wander behavior, input simulation)
+│   │   ├── npc.ts         # NPC ship AI (wander + combat behavior, input simulation)
 │   │   └── __tests__/
 │   │       ├── game.test.ts
 │   │       └── npc.test.ts
@@ -87,7 +87,7 @@ sequenceDiagram
     Note over C,S: Game Loop (60 Hz)
     loop Every tick (~16ms)
         C->>S: input { keys, mouseDx, mouseDy, fire }
-        Note right of S: Apply inputs (skip dead)<br/>Update NPC AI (skip dead)<br/>Update positions<br/>Spawn projectiles (skip dead)<br/>Move projectiles<br/>Detect collisions (alive only)<br/>Apply damage / kills<br/>Respawn timers
+        Note right of S: Apply inputs (skip dead)<br/>Update NPC AI with targeting (skip dead)<br/>Update positions<br/>Spawn player projectiles (skip dead)<br/>Spawn NPC projectiles (skip dead)<br/>Move projectiles<br/>Detect collisions (alive only)<br/>Apply damage / kills<br/>Respawn timers
         S->>C: state { players[] (incl. hp, kills, deaths), projectiles[] }
         opt Projectile hit a ship
             S->>C: hit { targetId, attackerId, projectileId, x, y, z }
@@ -174,9 +174,9 @@ All messages are JSON over WebSocket.
 2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
 3. ~~**Space environment**~~ — Starfield background, server-defined sun (with glow and point light) and planets (with optional rings) as spatial reference points.
 4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit.
-5. ~~**NPC ships**~~ — Server-controlled NPC ships that wander randomly at skill-dependent speeds. NPCs reuse the `PlayerLike` interface — AI simulates input each tick, then existing physics runs unchanged. Appear as red ships to all players.
+5. ~~**NPC ships**~~ — Server-controlled NPC ships with wander and combat AI at skill-dependent speeds (capped at 70% of player max speed). NPCs reuse the `PlayerLike` interface — AI simulates input each tick, then existing physics runs unchanged. Appear as red ships to all players.
 6. ~~**Health and eliminations**~~ — Ships have 4 HP. Each hit deals 1 damage. At 0 HP: death explosion (white flash + scale-up), kill feed entry, and respawn after 5 seconds. Dead ships freeze and become invisible. The local player sees a "DESTROYED" overlay with countdown. Both players and NPCs have health and respawn.
 7. ~~**HUD**~~ — Server-authoritative kill/death tracking for players and NPCs. Always-visible top-10 scoreboard (top-left) sorted by kills, with the local player highlighted in yellow. Shows connected human player count.
-8. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
-9. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
-10. **NPC combat** — NPCs target and shoot at nearby players.
+8. ~~**NPC combat**~~ — NPCs detect nearby entities (within 50 units), steer toward the closest target, and fire when their aim is within a skill-based threshold. Higher-skill NPCs aim more precisely but all NPCs shoot slower than players (0.8s vs 0.3s cooldown) and are capped at 70% max speed, giving players a clear advantage. A minimum combat range (5 units) prevents NPCs from deadlocking at point-blank range.
+9. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
+10. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).

@@ -8,6 +8,11 @@ import {
   NPC_WANDER_INTERVAL_MAX,
   NPC_MIN_SKILL,
   NPC_MAX_SKILL,
+  NPC_DETECTION_RANGE,
+  NPC_MIN_COMBAT_RANGE,
+  NPC_AIM_THRESHOLD_MIN,
+  NPC_AIM_THRESHOLD_MAX,
+  NPC_MAX_SPEED_FACTOR,
 } from '@x-drift/shared';
 import { type PlayerLike } from './game.js';
 
@@ -87,29 +92,75 @@ function normalizeAngle(a: number): number {
   return a;
 }
 
+/** Find the nearest alive entity within NPC_DETECTION_RANGE, excluding self. */
+export function findNearestTarget(
+  npc: NPC,
+  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number }>,
+): { id: string; x: number; y: number; z: number } | null {
+  const rangeSq = NPC_DETECTION_RANGE * NPC_DETECTION_RANGE;
+  const minRangeSq = NPC_MIN_COMBAT_RANGE * NPC_MIN_COMBAT_RANGE;
+  let best: { id: string; x: number; y: number; z: number } | null = null;
+  let bestDistSq = Infinity;
+
+  for (const e of allEntities) {
+    if (e.id === npc.id || e.hp <= 0) continue;
+    const dx = e.x - npc.x;
+    const dy = e.y - npc.y;
+    const dz = e.z - npc.z;
+    const distSq = dx * dx + dy * dy + dz * dz;
+    if (distSq < bestDistSq && distSq >= minRangeSq && distSq <= rangeSq) {
+      bestDistSq = distSq;
+      best = { id: e.id, x: e.x, y: e.y, z: e.z };
+    }
+  }
+  return best;
+}
+
 /**
  * Update NPC AI: sets mouseDx/mouseDy/keys so that the existing
  * updatePlayerMovement() produces the desired behavior.
  */
-export function updateNPCAI(npc: NPC, dt: number): void {
-  // Decrement wander timer
-  npc.wanderTimer -= dt;
-  if (npc.wanderTimer <= 0) {
-    // Pick a new target near the current heading (max ±60° yaw, ±15° pitch)
-    npc.targetYaw = npc.yaw + (Math.random() - 0.5) * (Math.PI / 1.5);
-    npc.targetPitch = npc.pitch + (Math.random() - 0.5) * (Math.PI / 6);
-    npc.targetPitch = Math.max(-0.4, Math.min(0.4, npc.targetPitch));
-    npc.wanderTimer = NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
+export function updateNPCAI(
+  npc: NPC,
+  dt: number,
+  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number }>,
+): void {
+  const target = findNearestTarget(npc, allEntities);
+
+  if (target) {
+    // Combat mode: aim at target
+    const dx = target.x - npc.x;
+    const dy = target.y - npc.y;
+    const dz = target.z - npc.z;
+    const horizDist = Math.sqrt(dx * dx + dz * dz);
+
+    // Match computeForward convention: forward = (-sin(yaw), sin(pitch), -cos(yaw))
+    npc.targetYaw = Math.atan2(-dx, -dz);
+    npc.targetPitch = Math.atan2(dy, horizDist);
+    npc.wanderTimer = 0;
+
+    // Fire when aim error is below skill-based threshold
+    const yawError = Math.abs(normalizeAngle(npc.targetYaw - npc.yaw));
+    const pitchError = Math.abs(npc.targetPitch - npc.pitch);
+    const aimError = Math.sqrt(yawError * yawError + pitchError * pitchError);
+    const threshold = NPC_AIM_THRESHOLD_MAX - npc.skill * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
+    npc.fire = aimError < threshold;
+  } else {
+    // Wander mode
+    npc.wanderTimer -= dt;
+    if (npc.wanderTimer <= 0) {
+      npc.targetYaw = npc.yaw + (Math.random() - 0.5) * (Math.PI / 1.5);
+      npc.targetPitch = npc.pitch + (Math.random() - 0.5) * (Math.PI / 6);
+      npc.targetPitch = Math.max(-0.4, Math.min(0.4, npc.targetPitch));
+      npc.wanderTimer = NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
+    }
+    npc.fire = false;
   }
 
-  // Steering: compute angular error to target
+  // Steering: compute angular error to target (shared for both modes)
   const yawError = normalizeAngle(npc.targetYaw - npc.yaw);
   const pitchError = npc.targetPitch - npc.pitch;
 
-  // Convert error to mouseDx/mouseDy via proportional control.
-  // updatePlayerMovement does: yaw -= mouseDx * SENSITIVITY
-  // So positive yaw error (target to the left) → negative mouseDx
-  // Scale factor (0–1) based on error magnitude — gentle for small errors
   const maxDelta = npc.skill * NPC_TURN_RATE;
   const yawScale = Math.min(1, Math.abs(yawError) / 0.5);
   const pitchScale = Math.min(1, Math.abs(pitchError) / 0.3);
@@ -121,7 +172,7 @@ export function updateNPCAI(npc: NPC, dt: number): void {
   npc.mouseDy = clampedDy * pitchScale;
 
   // Speed control: target speed based on skill
-  const targetSpeed = npc.skill * MAX_SPEED;
+  const targetSpeed = npc.skill * MAX_SPEED * NPC_MAX_SPEED_FACTOR;
   const deadband = 0.1;
   if (npc.speed < targetSpeed - deadband) {
     npc.keys = { w: true };
@@ -130,7 +181,4 @@ export function updateNPCAI(npc: NPC, dt: number): void {
   } else {
     npc.keys = {};
   }
-
-  // NPCs don't shoot (for now)
-  npc.fire = false;
 }

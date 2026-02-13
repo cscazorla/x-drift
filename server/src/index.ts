@@ -4,6 +4,7 @@ import {
   SERVER_PORT,
   TICK_RATE,
   FIRE_COOLDOWN,
+  NPC_FIRE_COOLDOWN,
   MAX_HP,
   RESPAWN_TIME,
   type CelestialBody,
@@ -216,9 +217,10 @@ function tick() {
   }
 
   // 2. NPC AI: skip dead NPCs
+  const aliveForAI = [...players.values(), ...npcs].filter(e => e.hp > 0);
   for (const npc of npcs) {
     if (npc.hp > 0) {
-      updateNPCAI(npc, dt);
+      updateNPCAI(npc, dt, aliveForAI);
       updatePlayerMovement(npc, dt);
     }
   }
@@ -235,6 +237,20 @@ function tick() {
       player.fireCooldown = FIRE_COOLDOWN;
     }
     player.fire = false;
+  }
+
+  // Spawn NPC projectiles
+  for (const npc of npcs) {
+    npc.fireCooldown = Math.max(0, npc.fireCooldown - dt);
+    if (npc.hp <= 0) { npc.fire = false; continue; }
+    const count = projectiles.filter((p) => p.ownerId === npc.id).length;
+    const proj = spawnProjectile(npc, count, nextProjectileId);
+    if (proj) {
+      projectiles.push(proj);
+      nextProjectileId++;
+      npc.fireCooldown = NPC_FIRE_COOLDOWN;
+    }
+    npc.fire = false;
   }
 
   // Move projectiles & expire
