@@ -68,6 +68,32 @@ Renders state with Three.js
 - The **client** only captures player input and renders the state received from the server.
 - The **server** is the single source of truth. It processes all inputs, runs the physics simulation, and sends the resulting world state back to every connected client.
 
+### Message Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+
+    Note over C,S: Connection
+    C->>S: WebSocket connect
+    S->>C: welcome { playerId, celestialBodies[] }
+
+    Note over C,S: Game Loop (60 Hz)
+    loop Every tick (~16ms)
+        C->>S: input { keys, mouseDx, mouseDy, fire }
+        Note right of S: Apply inputs<br/>Update positions<br/>Spawn projectiles<br/>Move projectiles<br/>Detect collisions
+        S->>C: state { players[], projectiles[] }
+        opt Projectile hit a ship
+            S->>C: hit { targetId, projectileId, x, y, z }
+        end
+    end
+
+    Note over C,S: Disconnection
+    C->>S: WebSocket close
+    Note right of S: Remove player<br/>Remove their projectiles
+```
+
 ## Getting Started
 
 ### Prerequisites

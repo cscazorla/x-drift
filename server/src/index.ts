@@ -133,11 +133,17 @@ wss.on('connection', (ws) => {
 });
 
 // ---- Game loop ----
+// Runs at 60 Hz. Each tick processes all player inputs, simulates the world,
+// then broadcasts the result to every client:
+//   1. A `state` message is ALWAYS sent — the full world snapshot (players + projectiles).
+//   2. A `hit` message is sent ONLY when a projectile collides with a ship.
 
 const dt = 1 / TICK_RATE;
 
 function tick() {
-  // Update player movement
+  // --- Simulation phase ---
+
+  // Apply accumulated input (mouse look, keys) and advance each player's position
   for (const player of players.values()) {
     updatePlayerMovement(player, dt);
   }
@@ -163,7 +169,10 @@ function tick() {
   const { survivors, hits } = detectCollisions(projectiles, targets);
   projectiles = survivors;
 
-  // Broadcast state
+  // --- Broadcast phase ---
+  // Always: send a `state` message with every player's position/rotation and every live projectile.
+  // Conditionally: if any collisions happened, also send a `hit` message per collision.
+
   const playerStates: PlayerState[] = [];
   for (const p of players.values()) {
     playerStates.push({
@@ -197,6 +206,7 @@ function tick() {
   const payload = JSON.stringify(stateMsg);
   const hitPayloads = hits.map((h) => JSON.stringify(h));
 
+  // Send to all connected clients: state first, then any hit events
   for (const player of players.values()) {
     if (player.ws.readyState === WebSocket.OPEN) {
       player.ws.send(payload);
