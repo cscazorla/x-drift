@@ -4,7 +4,7 @@ export interface WelcomeScreenHandle {
   teamSelected: Promise<number>;
 }
 
-export function showWelcomeScreen(initialCounts: [number, number]): WelcomeScreenHandle {
+export function showWelcomeScreen(initialCounts: [number, number], playerName?: string): WelcomeScreenHandle {
   let resolveTeam!: (team: number) => void;
   const teamSelected = new Promise<number>((resolve) => { resolveTeam = resolve; });
 
@@ -25,6 +25,14 @@ export function showWelcomeScreen(initialCounts: [number, number]): WelcomeScree
   subtitle.style.cssText = 'font-size:18px;color:#888;margin-top:8px;letter-spacing:4px';
   subtitle.textContent = 'TEAM DEATHMATCH';
   overlay.appendChild(subtitle);
+
+  // Player name
+  if (playerName) {
+    const nameTag = document.createElement('div');
+    nameTag.style.cssText = 'font-size:22px;color:#fff;margin-top:24px;letter-spacing:3px';
+    nameTag.textContent = playerName;
+    overlay.appendChild(nameTag);
+  }
 
   // Controls table
   const table = document.createElement('div');

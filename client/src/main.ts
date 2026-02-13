@@ -134,7 +134,7 @@ async function init() {
     if (msg.type === MessageType.TeamInfo) {
       if (!welcomeHandle) {
         // First TeamInfo — show welcome screen
-        welcomeHandle = showWelcomeScreen(msg.teams);
+        welcomeHandle = showWelcomeScreen(msg.teams, msg.playerName);
         // When the player picks a team, send JoinTeam
         welcomeHandle.teamSelected.then((team) => {
           const joinMsg: JoinTeamMessage = { type: MessageType.JoinTeam, team };

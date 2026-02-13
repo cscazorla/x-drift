@@ -84,6 +84,7 @@ export interface WelcomeMessage {
 export interface TeamInfoMessage {
   type: MessageType.TeamInfo;
   teams: [number, number];
+  playerName?: string;
 }
 
 export interface PlayerState {

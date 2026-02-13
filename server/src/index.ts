@@ -160,6 +160,7 @@ function releaseName(name: string): void {
 // ---- Lobby (connected but haven't picked a team yet) ----
 
 const lobby = new Set<WebSocket>();
+const lobbyNames = new Map<WebSocket, string>();
 
 function getTeamCounts(): [number, number] {
   let t0 = 0;
@@ -200,7 +201,9 @@ const wss = new WebSocketServer({ port: SERVER_PORT });
 wss.on('connection', (ws) => {
   // Start in lobby — send team counts, don't create a player yet
   lobby.add(ws);
-  const teamInfo: TeamInfoMessage = { type: MessageType.TeamInfo, teams: getTeamCounts() };
+  const name = assignName('lobby');
+  lobbyNames.set(ws, name);
+  const teamInfo: TeamInfoMessage = { type: MessageType.TeamInfo, teams: getTeamCounts(), playerName: name };
   ws.send(JSON.stringify(teamInfo));
 
   console.log(`Client joined lobby (${lobby.size} in lobby, ${players.size} in game)`);
@@ -214,7 +217,8 @@ wss.on('connection', (ws) => {
         lobby.delete(ws);
 
         const id = String(nextId++);
-        const name = assignName(id);
+        const name = lobbyNames.get(ws) ?? assignName(id);
+        lobbyNames.delete(ws);
         const spawn = randomSpawnPosition();
         const team = msg.team === 1 ? 1 : 0;
 
@@ -270,6 +274,8 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     if (lobby.has(ws)) {
+      const lobbyName = lobbyNames.get(ws);
+      if (lobbyName) { releaseName(lobbyName); lobbyNames.delete(ws); }
       lobby.delete(ws);
       console.log(`Lobby client disconnected (${lobby.size} in lobby)`);
       return;
