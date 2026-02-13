@@ -1,6 +1,6 @@
 # X-Drift
 
-Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship in team deathmatch — Green vs Blue — competing to outscore the enemy team.
+Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship in team deathmatch — Green vs Red — competing to outscore the enemy team. On the welcome screen, players choose which team to join while seeing live member counts.
 
 ## Tech Stack
 
@@ -29,6 +29,7 @@ x-drift/
 │   │   ├── celestial.ts   # Sun and planet renderer from server data
 │   │   ├── projectile.ts  # Projectile beam renderer (synced from server state)
 │   │   ├── hitEffect.ts   # Hit flash + death explosion effects
+│   │   ├── welcome.ts     # Welcome screen with team selection and live counts
 │   │   ├── killFeed.ts    # DOM-based kill feed overlay (top-right)
 │   │   └── scoreboard.ts  # Top-10 scoreboard overlay (top-left)
 
@@ -80,8 +81,15 @@ sequenceDiagram
     participant C as Client
     participant S as Server
 
-    Note over C,S: Connection
+    Note over C,S: Connection & Team Selection
     C->>S: WebSocket connect
+    S->>C: teamInfo { teams: [count0, count1] }
+    Note left of C: Show welcome screen<br/>with team counts
+    loop While in lobby
+        S->>C: teamInfo { teams: [count0, count1] }
+        Note left of C: Update live counts
+    end
+    C->>S: joinTeam { team }
     S->>C: welcome { playerId, celestialBodies[] }
 
     Note over C,S: Game Loop (60 Hz)
@@ -99,7 +107,7 @@ sequenceDiagram
 
     Note over C,S: Disconnection
     C->>S: WebSocket close
-    Note right of S: Remove player<br/>Remove their projectiles
+    Note right of S: Remove player<br/>Remove their projectiles<br/>Broadcast updated teamInfo
 ```
 
 ## Getting Started
@@ -157,19 +165,20 @@ All messages are JSON over WebSocket.
 
 | Message | Fields | Description |
 |---------|--------|-------------|
+| `joinTeam` | `team` | Player picks a team from the welcome screen (0 = green, 1 = red) |
 | `input` | `seq`, `keys`, `mouseDx`, `mouseDy`, `fire` | Currently pressed keys, accumulated mouse deltas, and fire intent |
 
 ### Server → Client
 
 | Message | Fields | Description |
 |---------|--------|-------------|
-| `welcome` | `playerId`, `celestialBodies[]` | Sent on connection, assigns a player ID and world geometry |
+| `teamInfo` | `teams: [number, number]` | Live team member counts (players + NPCs); sent to lobby clients on connect and whenever counts change |
+| `welcome` | `playerId`, `celestialBodies[]` | Sent after `joinTeam`, assigns a player ID and world geometry |
 | `state` | `players[]` (incl. `hp`, `kills`, `deaths`, `team`), `projectiles[]` | World snapshot with all player/NPC positions, scores, and team |
 | `hit` | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
 | `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
 
 ## Roadmap
-- In the welcome screen the player can pick the team
 - Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly
 - Add a trail to the ships when they are moving (speed > 0)
 - When ships clash they die automatically

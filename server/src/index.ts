@@ -15,6 +15,7 @@ import {
   type HitMessage,
   type KillMessage,
   type WelcomeMessage,
+  type TeamInfoMessage,
 } from '@x-drift/shared';
 import {
   type Projectile,
@@ -130,6 +131,26 @@ let nextId = 1;
 const npcs: NPC[] = createAllNPCs();
 const npcRespawnTimers = new Map<string, number>();
 
+// ---- Lobby (connected but haven't picked a team yet) ----
+
+const lobby = new Set<WebSocket>();
+
+function getTeamCounts(): [number, number] {
+  let t0 = 0;
+  let t1 = 0;
+  for (const p of players.values()) { if (p.team === 0) t0++; else t1++; }
+  for (const n of npcs) { if (n.team === 0) t0++; else t1++; }
+  return [t0, t1];
+}
+
+function broadcastTeamInfo(): void {
+  const msg: TeamInfoMessage = { type: MessageType.TeamInfo, teams: getTeamCounts() };
+  const payload = JSON.stringify(msg);
+  for (const ws of lobby) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+  }
+}
+
 // ---- Helpers ----
 
 function randomSpawnPosition(): { x: number; y: number; z: number; yaw: number; pitch: number } {
@@ -151,50 +172,68 @@ function randomSpawnPosition(): { x: number; y: number; z: number; yaw: number; 
 const wss = new WebSocketServer({ port: SERVER_PORT });
 
 wss.on('connection', (ws) => {
-  const id = String(nextId++);
-  const spawn = randomSpawnPosition();
+  // Start in lobby — send team counts, don't create a player yet
+  lobby.add(ws);
+  const teamInfo: TeamInfoMessage = { type: MessageType.TeamInfo, teams: getTeamCounts() };
+  ws.send(JSON.stringify(teamInfo));
 
-  // Pick team with fewer members
-  const team0 = [...players.values()].filter(p => p.team === 0).length + npcs.filter(n => n.team === 0).length;
-  const team1 = [...players.values()].filter(p => p.team === 1).length + npcs.filter(n => n.team === 1).length;
-  const team = team0 <= team1 ? 0 : 1;
-
-  const player: Player = {
-    id,
-    ws,
-    x: spawn.x,
-    y: spawn.y,
-    z: spawn.z,
-    yaw: spawn.yaw,
-    pitch: spawn.pitch,
-    roll: 0,
-    speed: 0,
-    hp: MAX_HP,
-    keys: {},
-    mouseDx: 0,
-    mouseDy: 0,
-    fire: false,
-    fireCooldown: 0,
-    respawnTimer: 0,
-    kills: 0,
-    deaths: 0,
-    team,
-  };
-  players.set(id, player);
-
-  const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id, celestialBodies };
-  ws.send(JSON.stringify(welcome));
-
-  console.log(`Player ${id} connected (${players.size} online)`);
+  console.log(`Client joined lobby (${lobby.size} in lobby, ${players.size} in game)`);
 
   ws.on('message', (raw) => {
     try {
       const msg: ClientMessage = JSON.parse(String(raw));
+
+      // Lobby client choosing a team
+      if (msg.type === MessageType.JoinTeam && lobby.has(ws)) {
+        lobby.delete(ws);
+
+        const id = String(nextId++);
+        const spawn = randomSpawnPosition();
+        const team = msg.team === 1 ? 1 : 0;
+
+        const player: Player = {
+          id,
+          ws,
+          x: spawn.x,
+          y: spawn.y,
+          z: spawn.z,
+          yaw: spawn.yaw,
+          pitch: spawn.pitch,
+          roll: 0,
+          speed: 0,
+          hp: MAX_HP,
+          keys: {},
+          mouseDx: 0,
+          mouseDy: 0,
+          fire: false,
+          fireCooldown: 0,
+          respawnTimer: 0,
+          kills: 0,
+          deaths: 0,
+          team,
+        };
+        players.set(id, player);
+
+        const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id, celestialBodies };
+        ws.send(JSON.stringify(welcome));
+
+        console.log(`Player ${id} joined team ${team} (${players.size} online)`);
+        broadcastTeamInfo();
+        return;
+      }
+
+      // In-game input
       if (msg.type === MessageType.Input) {
-        player.keys = msg.keys;
-        player.mouseDx += msg.mouseDx;
-        player.mouseDy += msg.mouseDy;
-        if (msg.fire) player.fire = true;
+        // Find the player for this ws
+        for (const player of players.values()) {
+          if (player.ws === ws) {
+            player.keys = msg.keys;
+            player.mouseDx += msg.mouseDx;
+            player.mouseDy += msg.mouseDy;
+            if (msg.fire) player.fire = true;
+            break;
+          }
+        }
       }
     } catch {
       // ignore malformed messages
@@ -202,9 +241,22 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    players.delete(id);
-    projectiles = projectiles.filter((p) => p.ownerId !== id);
-    console.log(`Player ${id} disconnected (${players.size} online)`);
+    if (lobby.has(ws)) {
+      lobby.delete(ws);
+      console.log(`Lobby client disconnected (${lobby.size} in lobby)`);
+      return;
+    }
+
+    // Find and remove the player
+    for (const [id, player] of players) {
+      if (player.ws === ws) {
+        players.delete(id);
+        projectiles = projectiles.filter((p) => p.ownerId !== id);
+        console.log(`Player ${id} disconnected (${players.size} online)`);
+        broadcastTeamInfo();
+        break;
+      }
+    }
   });
 });
 

@@ -3,10 +3,14 @@
 export const enum MessageType {
   /** Client → Server: player input */
   Input = 'input',
+  /** Client → Server: player chooses a team from lobby */
+  JoinTeam = 'joinTeam',
   /** Server → Client: world state snapshot */
   State = 'state',
   /** Server → Client: player accepted into the game */
   Welcome = 'welcome',
+  /** Server → Client: current team member counts (sent to lobby clients) */
+  TeamInfo = 'teamInfo',
   /** Server → Client: a projectile hit a ship */
   Hit = 'hit',
   /** Server → Client: a ship was destroyed */
@@ -26,6 +30,11 @@ export interface InputMessage {
   mouseDy: number;
   /** True if the player wants to fire this tick */
   fire: boolean;
+}
+
+export interface JoinTeamMessage {
+  type: MessageType.JoinTeam;
+  team: number;
 }
 
 // ---- Celestial bodies ----
@@ -71,6 +80,11 @@ export interface WelcomeMessage {
   celestialBodies: CelestialBody[];
 }
 
+export interface TeamInfoMessage {
+  type: MessageType.TeamInfo;
+  teams: [number, number];
+}
+
 export interface PlayerState {
   id: string;
   x: number;
@@ -112,8 +126,8 @@ export interface KillMessage {
   z: number;
 }
 
-export type ServerMessage = WelcomeMessage | StateMessage | HitMessage | KillMessage;
-export type ClientMessage = InputMessage;
+export type ServerMessage = WelcomeMessage | TeamInfoMessage | StateMessage | HitMessage | KillMessage;
+export type ClientMessage = InputMessage | JoinTeamMessage;
 
 // ---- Constants ----
 

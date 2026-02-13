@@ -10,6 +10,7 @@ import {
   RESPAWN_TIME,
   type ServerMessage,
   type InputMessage,
+  type JoinTeamMessage,
   type PlayerState,
 } from '@x-drift/shared';
 import { getOrCreateShip, removeShip, getShipIds, setThrustState } from './ship';
@@ -19,7 +20,7 @@ import { updateProjectiles } from './projectile';
 import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
 import { addKillEntry, killFeedContainer } from './killFeed';
 import { updateScoreboard, scoreboardContainer } from './scoreboard';
-import { showWelcomeScreen } from './welcome';
+import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
 
 // ---- Three.js setup ----
 
@@ -118,71 +119,33 @@ function animate() {
 
 animate();
 
-// ---- Game init (deferred until welcome screen is dismissed) ----
+// ---- Game init ----
 
 async function init() {
-  await showWelcomeScreen();
-
-  // Show HUD elements
-  debugBar.style.display = '';
-  scoreboardContainer.style.display = '';
-  killFeedContainer.style.display = 'flex';
-
-  // ---- Input tracking ----
-
-  const keys: Record<string, boolean> = {};
-  let inputSeq = 0;
-
-  // Mouse delta accumulators (reset after each input send)
-  let accumulatedDx = 0;
-  let accumulatedDy = 0;
-
-  // Fire intent (reset after each input send)
-  let fireIntent = false;
-
-  window.addEventListener('keydown', (e) => {
-    keys[e.key] = true;
-  });
-  window.addEventListener('keyup', (e) => {
-    keys[e.key] = false;
-  });
-
-  // ---- Pointer Lock ----
-
-  const canvas = renderer.domElement;
-
-  canvas.addEventListener('click', () => {
-    canvas.requestPointerLock();
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (document.pointerLockElement === canvas) {
-      accumulatedDx += e.movementX;
-      accumulatedDy -= e.movementY;
-    }
-  });
-
-  document.addEventListener('mousedown', (e) => {
-    if (e.button === 0 && document.pointerLockElement === canvas) {
-      fireIntent = true;
-    }
-  });
-
-  // ---- Chase camera constants ----
-
-  const CAM_DIST = 8;
-  const CAM_HEIGHT = 3;
-
-  // ---- WebSocket connection ----
-
+  // Connect WebSocket first (before showing welcome screen)
   const ws = new WebSocket(`ws://localhost:${SERVER_PORT}`);
 
-  ws.addEventListener('open', () => {
-    console.log('Connected to server');
-  });
+  // Wait for first TeamInfo, then show the welcome screen with team counts
+  let welcomeHandle: WelcomeScreenHandle | null = null;
 
   ws.addEventListener('message', (event) => {
     const msg: ServerMessage = JSON.parse(String(event.data));
+
+    if (msg.type === MessageType.TeamInfo) {
+      if (!welcomeHandle) {
+        // First TeamInfo — show welcome screen
+        welcomeHandle = showWelcomeScreen(msg.teams);
+        // When the player picks a team, send JoinTeam
+        welcomeHandle.teamSelected.then((team) => {
+          const joinMsg: JoinTeamMessage = { type: MessageType.JoinTeam, team };
+          ws.send(JSON.stringify(joinMsg));
+        });
+      } else {
+        // Subsequent updates — refresh live counts
+        welcomeHandle.updateCounts(msg.teams);
+      }
+      return;
+    }
 
     if (msg.type === MessageType.Welcome) {
       myPlayerId = msg.playerId;
@@ -191,6 +154,11 @@ async function init() {
         dirLight.position.copy(sunPos);
       }
       console.log(`Joined as player ${myPlayerId}`);
+
+      // Show HUD elements
+      debugBar.style.display = '';
+      scoreboardContainer.style.display = '';
+      killFeedContainer.style.display = 'flex';
       return;
     }
 
@@ -283,14 +251,63 @@ async function init() {
     }
   });
 
+  ws.addEventListener('open', () => {
+    console.log('Connected to server');
+  });
+
   ws.addEventListener('close', () => {
     console.log('Disconnected from server');
   });
 
+  // ---- Input tracking ----
+
+  const keys: Record<string, boolean> = {};
+  let inputSeq = 0;
+
+  // Mouse delta accumulators (reset after each input send)
+  let accumulatedDx = 0;
+  let accumulatedDy = 0;
+
+  // Fire intent (reset after each input send)
+  let fireIntent = false;
+
+  window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+  });
+
+  // ---- Pointer Lock ----
+
+  const canvas = renderer.domElement;
+
+  canvas.addEventListener('click', () => {
+    canvas.requestPointerLock();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === canvas) {
+      accumulatedDx += e.movementX;
+      accumulatedDy -= e.movementY;
+    }
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && document.pointerLockElement === canvas) {
+      fireIntent = true;
+    }
+  });
+
+  // ---- Chase camera constants ----
+
+  const CAM_DIST = 8;
+  const CAM_HEIGHT = 3;
+
   // ---- Send input to server at a fixed rate ----
 
   setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) {
+    if (ws.readyState === WebSocket.OPEN && myPlayerId) {
       // Suppress input when dead
       const dead = localDead;
       const msg: InputMessage = {
