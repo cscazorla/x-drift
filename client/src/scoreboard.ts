@@ -14,10 +14,6 @@ document.body.appendChild(container);
 
 export { container as scoreboardContainer };
 
-const headerEl = document.createElement('div');
-headerEl.style.cssText = 'color:#0f0;margin-bottom:6px;font-weight:bold';
-container.appendChild(headerEl);
-
 const teamSummaryEl = document.createElement('div');
 teamSummaryEl.style.cssText = 'margin-bottom:6px';
 container.appendChild(teamSummaryEl);
@@ -35,9 +31,6 @@ export function updateScoreboard(
   const sorted = [...players].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
 
   const top = sorted.slice(0, SCOREBOARD_SIZE);
-
-  const humanCount = players.filter((p) => !p.id.startsWith('npc-')).length;
-  headerEl.textContent = `PLAYERS: ${humanCount}`;
 
   // Team aggregates
   const teamCount = [0, 0];

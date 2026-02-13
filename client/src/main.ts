@@ -257,8 +257,9 @@ async function init() {
           stars.position.copy(camera.position);
 
           // Update debug bar
+          const humanCount = msg.players.filter(p => !p.id.startsWith('npc-')).length;
           debugBar.textContent =
-            `hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
+            `players ${humanCount}  hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
         }
 
         // Update scoreboard
