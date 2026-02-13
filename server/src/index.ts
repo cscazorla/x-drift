@@ -32,7 +32,7 @@ import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
 const celestialBodies: CelestialBody[] = [
   {
     type: 'sun',
-    x: 300, y: 80, z: -200,
+    x: 0, y: 0, z: 0,
     radius: 30,
     color: 0xffaa00,
     emissive: 0xffdd44,
@@ -155,7 +155,7 @@ function broadcastTeamInfo(): void {
 
 function randomSpawnPosition(): { x: number; y: number; z: number; yaw: number; pitch: number } {
   const spawnAngle = Math.random() * 2 * Math.PI;
-  const spawnRadius = 30 + Math.random() * 50;
+  const spawnRadius = 80 + Math.random() * 50;
   const sx = Math.cos(spawnAngle) * spawnRadius;
   const sy = (Math.random() - 0.5) * 40;
   const sz = Math.sin(spawnAngle) * spawnRadius;
@@ -164,7 +164,7 @@ function randomSpawnPosition(): { x: number; y: number; z: number; yaw: number; 
   const dy = (sun?.y ?? 0) - sy;
   const dz = (sun?.z ?? 0) - sz;
   const dist = Math.sqrt(dx * dx + dz * dz);
-  return { x: sx, y: sy, z: sz, yaw: Math.atan2(-dx, -dz), pitch: Math.atan2(dy, dist) };
+  return { x: sx, y: sy, z: sz, yaw: Math.atan2(dx, dz), pitch: Math.atan2(-dy, dist) };
 }
 
 // ---- WebSocket server ----

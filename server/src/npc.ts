@@ -32,15 +32,18 @@ export interface NPC extends PlayerLike {
 
 export function createNPC(id: string, team: number): NPC {
   const spawnAngle = Math.random() * 2 * Math.PI;
-  const spawnRadius = 30 + Math.random() * 50;
+  const spawnRadius = 80 + Math.random() * 50;
   const skill = NPC_MIN_SKILL + Math.random() * (NPC_MAX_SKILL - NPC_MIN_SKILL);
+  const x = Math.cos(spawnAngle) * spawnRadius;
+  const z = Math.sin(spawnAngle) * spawnRadius;
+  const outwardYaw = Math.atan2(-x, -z);  // face away from origin
 
   return {
     id,
-    x: Math.cos(spawnAngle) * spawnRadius,
+    x,
     y: (Math.random() - 0.5) * 40,
-    z: Math.sin(spawnAngle) * spawnRadius,
-    yaw: Math.random() * 2 * Math.PI,
+    z,
+    yaw: outwardYaw,
     pitch: 0,
     roll: 0,
     speed: 0,
@@ -51,7 +54,7 @@ export function createNPC(id: string, team: number): NPC {
     fire: false,
     fireCooldown: 0,
     skill,
-    targetYaw: Math.random() * 2 * Math.PI,
+    targetYaw: outwardYaw,
     targetPitch: (Math.random() - 0.5) * 0.5,
     wanderTimer: NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN),
     kills: 0,
@@ -71,16 +74,17 @@ export function createAllNPCs(): NPC[] {
 /** Reset an NPC to a fresh spawn state (new position, full hp). Keeps id and skill. */
 export function respawnNPC(npc: NPC): void {
   const spawnAngle = Math.random() * 2 * Math.PI;
-  const spawnRadius = 30 + Math.random() * 50;
+  const spawnRadius = 80 + Math.random() * 50;
   npc.x = Math.cos(spawnAngle) * spawnRadius;
   npc.y = (Math.random() - 0.5) * 40;
   npc.z = Math.sin(spawnAngle) * spawnRadius;
+  const outwardYaw = Math.atan2(-npc.x, -npc.z);  // face away from origin
   npc.hp = MAX_HP;
   npc.speed = 0;
-  npc.yaw = Math.random() * 2 * Math.PI;
+  npc.yaw = outwardYaw;
   npc.pitch = 0;
   npc.roll = 0;
-  npc.targetYaw = Math.random() * 2 * Math.PI;
+  npc.targetYaw = outwardYaw;
   npc.targetPitch = (Math.random() - 0.5) * 0.5;
   npc.wanderTimer = NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
 }
