@@ -18,6 +18,8 @@ export interface NPC extends PlayerLike {
   targetYaw: number;    // direction the NPC is steering toward
   targetPitch: number;
   wanderTimer: number;  // countdown to next direction change
+  kills: number;
+  deaths: number;
 }
 
 // ---- Factory functions ----
@@ -46,6 +48,8 @@ export function createNPC(id: string): NPC {
     targetYaw: Math.random() * 2 * Math.PI,
     targetPitch: (Math.random() - 0.5) * 0.5,
     wanderTimer: NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN),
+    kills: 0,
+    deaths: 0,
   };
 }
 

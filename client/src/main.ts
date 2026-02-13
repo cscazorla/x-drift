@@ -14,6 +14,7 @@ import { createCelestialBodies } from './celestial';
 import { updateProjectiles } from './projectile';
 import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
 import { addKillEntry } from './killFeed';
+import { updateScoreboard } from './scoreboard';
 
 // ---- Three.js setup ----
 
@@ -206,6 +207,9 @@ ws.addEventListener('message', (event) => {
         debugBar.textContent =
           `hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
       }
+
+      // Update scoreboard
+      updateScoreboard(msg.players, myPlayerId);
     }
   }
 

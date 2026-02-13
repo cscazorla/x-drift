@@ -76,6 +76,8 @@ export interface PlayerState {
   roll: number;
   speed: number;
   hp: number;
+  kills: number;
+  deaths: number;
 }
 
 export interface StateMessage {
@@ -128,8 +130,11 @@ export const MAX_PROJECTILES_PER_PLAYER = 10;
 export const MAX_HP = 4;
 export const RESPAWN_TIME = 5; // seconds
 
+// HUD constants
+export const SCOREBOARD_SIZE = 10;
+
 // NPC constants
-export const NPC_COUNT = 50;
+export const NPC_COUNT = 150;
 export const NPC_TURN_RATE = 400;           // max mouse-delta units for steering
 export const NPC_WANDER_INTERVAL_MIN = 2;   // seconds
 export const NPC_WANDER_INTERVAL_MAX = 5;   // seconds

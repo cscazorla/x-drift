@@ -10,8 +10,9 @@ export function addKillEntry(attackerId: string, targetId: string, myPlayerId: s
   const el = document.createElement('div');
   const isLocal = attackerId === myPlayerId || targetId === myPlayerId;
   el.style.cssText =
-    `padding:4px 10px;font:12px monospace;border-radius:3px;` +
-    `background:rgba(0,0,0,0.7);color:${isLocal ? '#ffdd44' : '#ccc'}`;
+    `padding:6px 14px;font:bold 14px monospace;border-radius:4px;` +
+    `background:rgba(0,0,0,0.85);border:1px solid ${isLocal ? '#ffdd44' : '#666'};` +
+    `color:${isLocal ? '#ffdd44' : '#eee'}`;
   el.textContent = `${attackerId} eliminated ${targetId}`;
   container.appendChild(el);
 

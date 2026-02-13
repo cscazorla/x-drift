@@ -30,6 +30,8 @@ function makeNPC(overrides: Partial<NPC> = {}): NPC {
     targetYaw: 0,
     targetPitch: 0,
     wanderTimer: 3,
+    kills: 0,
+    deaths: 0,
     ...overrides,
   };
 }

@@ -29,7 +29,8 @@ x-drift/
 │   │   ├── celestial.ts   # Sun and planet renderer from server data
 │   │   ├── projectile.ts  # Projectile beam renderer (synced from server state)
 │   │   ├── hitEffect.ts   # Hit flash + death explosion effects
-│   │   └── killFeed.ts    # DOM-based kill feed overlay (top-right)
+│   │   ├── killFeed.ts    # DOM-based kill feed overlay (top-right)
+│   │   └── scoreboard.ts  # Top-10 scoreboard overlay (top-left)
 
 │   ├── package.json
 │   └── tsconfig.json
@@ -87,7 +88,7 @@ sequenceDiagram
     loop Every tick (~16ms)
         C->>S: input { keys, mouseDx, mouseDy, fire }
         Note right of S: Apply inputs (skip dead)<br/>Update NPC AI (skip dead)<br/>Update positions<br/>Spawn projectiles (skip dead)<br/>Move projectiles<br/>Detect collisions (alive only)<br/>Apply damage / kills<br/>Respawn timers
-        S->>C: state { players[] (incl. hp), projectiles[] }
+        S->>C: state { players[] (incl. hp, kills, deaths), projectiles[] }
         opt Projectile hit a ship
             S->>C: hit { targetId, attackerId, projectileId, x, y, z }
         end
@@ -163,7 +164,7 @@ All messages are JSON over WebSocket.
 | Message | Fields | Description |
 |---------|--------|-------------|
 | `welcome` | `playerId`, `celestialBodies[]` | Sent on connection, assigns a player ID and world geometry |
-| `state` | `players[]` (incl. `hp`), `projectiles[]` | World snapshot with all player and projectile positions |
+| `state` | `players[]` (incl. `hp`, `kills`, `deaths`), `projectiles[]` | World snapshot with all player/NPC positions and scores |
 | `hit` | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
 | `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
 
@@ -175,7 +176,7 @@ All messages are JSON over WebSocket.
 4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit.
 5. ~~**NPC ships**~~ — Server-controlled NPC ships that wander randomly at skill-dependent speeds. NPCs reuse the `PlayerLike` interface — AI simulates input each tick, then existing physics runs unchanged. Appear as red ships to all players.
 6. ~~**Health and eliminations**~~ — Ships have 4 HP. Each hit deals 1 damage. At 0 HP: death explosion (white flash + scale-up), kill feed entry, and respawn after 5 seconds. Dead ships freeze and become invisible. The local player sees a "DESTROYED" overlay with countdown. Both players and NPCs have health and respawn.
-7. **HUD** — 2D overlay showing score and connected players.
+7. ~~**HUD**~~ — Server-authoritative kill/death tracking for players and NPCs. Always-visible top-10 scoreboard (top-left) sorted by kills, with the local player highlighted in yellow. Shows connected human player count.
 8. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
 9. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
 10. **NPC combat** — NPCs target and shoot at nearby players.

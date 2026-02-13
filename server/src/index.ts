@@ -69,6 +69,8 @@ interface Player {
   fire: boolean;
   fireCooldown: number;
   respawnTimer: number;
+  kills: number;
+  deaths: number;
 }
 
 // ---- State ----
@@ -121,6 +123,8 @@ wss.on('connection', (ws) => {
     fire: false,
     fireCooldown: 0,
     respawnTimer: 0,
+    kills: 0,
+    deaths: 0,
   };
   players.set(id, player);
 
@@ -202,13 +206,24 @@ function tick() {
   // 5. Apply damage → get kills
   const kills = applyDamage(hits, allEntities);
 
-  // Set respawn timers for newly killed entities
+  // Set respawn timers and update scores for newly killed entities
+  const npcById = new Map(npcs.map((n) => [n.id, n]));
   for (const kill of kills) {
-    const player = players.get(kill.targetId);
-    if (player) {
-      player.respawnTimer = RESPAWN_TIME;
+    const targetPlayer = players.get(kill.targetId);
+    if (targetPlayer) {
+      targetPlayer.respawnTimer = RESPAWN_TIME;
+      targetPlayer.deaths += 1;
     } else {
       npcRespawnTimers.set(kill.targetId, RESPAWN_TIME);
+      const targetNpc = npcById.get(kill.targetId);
+      if (targetNpc) targetNpc.deaths += 1;
+    }
+    const attackerPlayer = players.get(kill.attackerId);
+    if (attackerPlayer) {
+      attackerPlayer.kills += 1;
+    } else {
+      const attackerNpc = npcById.get(kill.attackerId);
+      if (attackerNpc) attackerNpc.kills += 1;
     }
   }
 
@@ -248,6 +263,8 @@ function tick() {
 
   const playerStates: PlayerState[] = [];
   for (const p of allEntities) {
+    const humanPlayer = players.get(p.id);
+    const npc = npcById.get(p.id);
     playerStates.push({
       id: p.id,
       x: p.x,
@@ -258,6 +275,8 @@ function tick() {
       roll: p.roll,
       speed: p.speed,
       hp: p.hp,
+      kills: humanPlayer?.kills ?? npc?.kills ?? 0,
+      deaths: humanPlayer?.deaths ?? npc?.deaths ?? 0,
     });
   }
 
