@@ -48,6 +48,51 @@ const celestialBodies: CelestialBody[] = [
     color: 0xcc8844,
     ring: { innerRadius: 24, outerRadius: 34, color: 0xddaa66 },
   },
+  // Small red rocky planet — barren, no atmosphere or rings
+  {
+    type: 'planet',
+    x: -80, y: 120, z: -500,
+    radius: 6,
+    color: 0xbb4422,
+  },
+  // Large gas giant with thick green atmosphere
+  {
+    type: 'planet',
+    x: 450, y: -60, z: 300,
+    radius: 25,
+    color: 0x2a4a2a,
+    atmosphere: { color: 0x44aa55, opacity: 0.2, scale: 1.12 },
+  },
+  // Tiny pale moon
+  {
+    type: 'planet',
+    x: -400, y: 10, z: -100,
+    radius: 4,
+    color: 0xccccaa,
+  },
+  // Volcanic world — dark surface with fiery atmosphere
+  {
+    type: 'planet',
+    x: 200, y: -120, z: 500,
+    radius: 10,
+    color: 0x332211,
+    atmosphere: { color: 0xff4400, opacity: 0.12, scale: 1.15 },
+  },
+  // Golden desert world
+  {
+    type: 'planet',
+    x: -350, y: 90, z: -400,
+    radius: 15,
+    color: 0xddaa33,
+  },
+  // Small purple planet with hazy atmosphere
+  {
+    type: 'planet',
+    x: 380, y: 140, z: -150,
+    radius: 8,
+    color: 0x7733aa,
+    atmosphere: { color: 0xaa66dd, opacity: 0.15, scale: 1.1 },
+  },
 ];
 
 // ---- Player tracking ----

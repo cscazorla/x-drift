@@ -48,7 +48,7 @@ function createShip(
   // Left engine
   const leftEngine = new THREE.Mesh(
     new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8),
-    new THREE.MeshStandardMaterial({ color: accent }),
+    new THREE.MeshStandardMaterial({ color: accent, emissive: glow, emissiveIntensity: 0.5 }),
   );
   leftEngine.position.set(-0.8, 0, 0.1);
   leftEngine.rotation.x = Math.PI / 2;
@@ -57,7 +57,7 @@ function createShip(
   // Right engine
   const rightEngine = new THREE.Mesh(
     new THREE.CylinderGeometry(0.07, 0.07, 0.5, 8),
-    new THREE.MeshStandardMaterial({ color: accent }),
+    new THREE.MeshStandardMaterial({ color: accent, emissive: glow, emissiveIntensity: 0.5 }),
   );
   rightEngine.position.set(0.8, 0, 0.1);
   rightEngine.rotation.x = Math.PI / 2;

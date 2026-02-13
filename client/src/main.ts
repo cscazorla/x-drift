@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import {
   MessageType,
   SERVER_PORT,
@@ -40,6 +44,18 @@ const dirLight = new THREE.DirectionalLight(0xfff5e6, 1);
 dirLight.position.set(50, 30, 50);
 scene.add(dirLight);
 
+// Bloom post-processing
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  1.5,  // strength
+  0.8,  // radius
+  0.75, // threshold
+);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
 // Starfield (follows camera so stars appear infinitely far)
 const stars = createStarfield(scene);
 
@@ -48,6 +64,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // ---- Debug bar ----
@@ -271,7 +288,7 @@ function animate() {
     deathCountdown.textContent = `Respawning in ${Math.max(1, Math.ceil(respawnCountdown))}s`;
   }
 
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 animate();

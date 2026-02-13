@@ -9,27 +9,31 @@ export function createCelestialBodies(
 
   for (const body of bodies) {
     if (body.type === 'sun') {
-      // Sun sphere
+      // Sun sphere — MeshBasicMaterial so it's uniformly bright (self-luminous)
+      const emissiveColor = body.emissive ?? body.color;
       const geo = new THREE.SphereGeometry(body.radius, 32, 32);
-      const mat = new THREE.MeshStandardMaterial({
-        color: body.color,
-        emissive: body.emissive ?? body.color,
-        emissiveIntensity: 1.5,
-      });
+      const mat = new THREE.MeshBasicMaterial({ color: emissiveColor });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(body.x, body.y, body.z);
       scene.add(mesh);
 
-      // Glow shell
-      const glowGeo = new THREE.SphereGeometry(body.radius * 1.15, 32, 32);
-      const glowMat = new THREE.MeshBasicMaterial({
-        color: body.emissive ?? body.color,
-        transparent: true,
-        opacity: 0.15,
-      });
-      const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.set(body.x, body.y, body.z);
-      scene.add(glow);
+      // Layered corona for natural falloff
+      const coronaLayers = [
+        { scale: 1.08, opacity: 0.18, color: emissiveColor },
+        { scale: 1.2, opacity: 0.08, color: 0xff8800 },
+        { scale: 1.4, opacity: 0.03, color: 0xff4400 },
+      ];
+      for (const layer of coronaLayers) {
+        const cGeo = new THREE.SphereGeometry(body.radius * layer.scale, 32, 32);
+        const cMat = new THREE.MeshBasicMaterial({
+          color: layer.color,
+          transparent: true,
+          opacity: layer.opacity,
+        });
+        const cMesh = new THREE.Mesh(cGeo, cMat);
+        cMesh.position.set(body.x, body.y, body.z);
+        scene.add(cMesh);
+      }
 
       // Point light at sun position
       const light = new THREE.PointLight(0xfff5e6, 1.5, 0);
@@ -44,6 +48,20 @@ export function createCelestialBodies(
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(body.x, body.y, body.z);
       scene.add(mesh);
+
+      // Optional atmosphere
+      if (body.atmosphere) {
+        const atmGeo = new THREE.SphereGeometry(body.radius * body.atmosphere.scale, 32, 32);
+        const atmMat = new THREE.MeshBasicMaterial({
+          color: body.atmosphere.color,
+          transparent: true,
+          opacity: body.atmosphere.opacity,
+          side: THREE.BackSide,
+        });
+        const atm = new THREE.Mesh(atmGeo, atmMat);
+        atm.position.set(body.x, body.y, body.z);
+        scene.add(atm);
+      }
 
       // Optional ring
       if (body.ring) {

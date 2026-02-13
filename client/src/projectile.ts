@@ -13,8 +13,10 @@ const sharedGeometry = new THREE.CylinderGeometry(
 // Shift so the cylinder's origin is at its tail (beam extends forward)
 sharedGeometry.translate(0, BEAM_LENGTH / 2, 0);
 
-const sharedMaterial = new THREE.MeshBasicMaterial({
+const sharedMaterial = new THREE.MeshStandardMaterial({
   color: 0xffee44,
+  emissive: 0xffee44,
+  emissiveIntensity: 1.5,
   transparent: true,
   opacity: 0.9,
 });

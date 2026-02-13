@@ -43,6 +43,11 @@ export interface CelestialBody {
     outerRadius: number;
     color: number;
   };
+  atmosphere?: {
+    color: number;
+    opacity: number;
+    scale: number;
+  };
 }
 
 // ---- Projectile state ----
