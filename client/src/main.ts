@@ -30,7 +30,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Basic lighting
-scene.add(new THREE.AmbientLight(0x202020));
+scene.add(new THREE.AmbientLight(0x445566, 0.8));
 const dirLight = new THREE.DirectionalLight(0xfff5e6, 1);
 dirLight.position.set(50, 30, 50);
 scene.add(dirLight);

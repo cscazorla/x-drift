@@ -68,14 +68,24 @@ const wss = new WebSocketServer({ port: SERVER_PORT });
 
 wss.on('connection', (ws) => {
   const id = String(nextId++);
+  const spawnAngle = Math.random() * 2 * Math.PI;
+  const spawnRadius = 30 + Math.random() * 50;
+  const sx = Math.cos(spawnAngle) * spawnRadius;
+  const sy = (Math.random() - 0.5) * 40;
+  const sz = Math.sin(spawnAngle) * spawnRadius;
+  const sun = celestialBodies.find((b) => b.type === 'sun');
+  const dx = (sun?.x ?? 0) - sx;
+  const dy = (sun?.y ?? 0) - sy;
+  const dz = (sun?.z ?? 0) - sz;
+  const dist = Math.sqrt(dx * dx + dz * dz);
   const player: Player = {
     id,
     ws,
-    x: 0,
-    y: 0,
-    z: 0,
-    yaw: 0,
-    pitch: 0,
+    x: sx,
+    y: sy,
+    z: sz,
+    yaw: Math.atan2(-dx, -dz),
+    pitch: Math.atan2(dy, dist),
     roll: 0,
     speed: 0,
     keys: {},
