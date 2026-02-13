@@ -7,6 +7,8 @@ export const enum MessageType {
   State = 'state',
   /** Server → Client: player accepted into the game */
   Welcome = 'welcome',
+  /** Server → Client: a projectile hit a ship */
+  Hit = 'hit',
 }
 
 // ---- Client → Server messages ----
@@ -20,6 +22,8 @@ export interface InputMessage {
   mouseDx: number;
   /** Accumulated mouse Y delta since last message */
   mouseDy: number;
+  /** True if the player wants to fire this tick */
+  fire: boolean;
 }
 
 // ---- Celestial bodies ----
@@ -37,6 +41,19 @@ export interface CelestialBody {
     outerRadius: number;
     color: number;
   };
+}
+
+// ---- Projectile state ----
+
+export interface ProjectileState {
+  id: number;
+  ownerId: string;
+  x: number;
+  y: number;
+  z: number;
+  dx: number;
+  dy: number;
+  dz: number;
 }
 
 // ---- Server → Client messages ----
@@ -61,9 +78,19 @@ export interface PlayerState {
 export interface StateMessage {
   type: MessageType.State;
   players: PlayerState[];
+  projectiles: ProjectileState[];
 }
 
-export type ServerMessage = WelcomeMessage | StateMessage;
+export interface HitMessage {
+  type: MessageType.Hit;
+  targetId: string;
+  projectileId: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+export type ServerMessage = WelcomeMessage | StateMessage | HitMessage;
 export type ClientMessage = InputMessage;
 
 // ---- Constants ----
@@ -76,3 +103,10 @@ export const BRAKE_FORCE = 8; // units/second² when pressing S
 export const MOUSE_SENSITIVITY = 0.003;
 export const MAX_PITCH = Math.PI / 3; // ±60°
 export const ROLL_SPEED = 2; // radians per second
+
+// Projectile constants
+export const PROJECTILE_SPEED = 40; // units/second
+export const PROJECTILE_LIFETIME = 3; // seconds
+export const FIRE_COOLDOWN = 0.3; // seconds
+export const PROJECTILE_HIT_RADIUS = 1; // units
+export const MAX_PROJECTILES_PER_PLAYER = 10;

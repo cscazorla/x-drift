@@ -10,6 +10,8 @@ import {
 import { getOrCreateShip, removeShip, getShipIds } from './ship';
 import { createStarfield } from './starfield';
 import { createCelestialBodies } from './celestial';
+import { updateProjectiles } from './projectile';
+import { triggerHitFlash, updateHitFlashes } from './hitEffect';
 
 // ---- Three.js setup ----
 
@@ -66,6 +68,9 @@ let inputSeq = 0;
 let accumulatedDx = 0;
 let accumulatedDy = 0;
 
+// Fire intent (reset after each input send)
+let fireIntent = false;
+
 window.addEventListener('keydown', (e) => {
   keys[e.key] = true;
 });
@@ -85,6 +90,12 @@ document.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement === canvas) {
     accumulatedDx += e.movementX;
     accumulatedDy -= e.movementY;
+  }
+});
+
+document.addEventListener('mousedown', (e) => {
+  if (e.button === 0 && document.pointerLockElement === canvas) {
+    fireIntent = true;
   }
 });
 
@@ -129,6 +140,9 @@ ws.addEventListener('message', (event) => {
       ship.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
     }
 
+    // Update projectile meshes
+    updateProjectiles(scene, msg.projectiles);
+
     // Chase camera follows the local player
     if (myPlayerId) {
       const me = msg.players.find((p: PlayerState) => p.id === myPlayerId);
@@ -161,6 +175,10 @@ ws.addEventListener('message', (event) => {
       }
     }
   }
+
+  if (msg.type === MessageType.Hit) {
+    triggerHitFlash(msg.targetId);
+  }
 });
 
 ws.addEventListener('close', () => {
@@ -177,19 +195,25 @@ setInterval(() => {
       keys: { ...keys },
       mouseDx: accumulatedDx,
       mouseDy: accumulatedDy,
+      fire: fireIntent,
     };
     ws.send(JSON.stringify(msg));
 
     // Reset accumulators after sending
     accumulatedDx = 0;
     accumulatedDy = 0;
+    fireIntent = false;
   }
 }, 1000 / TICK_RATE);
 
 // ---- Render loop ----
 
+const clock = new THREE.Clock();
+
 function animate() {
   requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  updateHitFlashes(dt);
   renderer.render(scene, camera);
 }
 

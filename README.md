@@ -25,7 +25,9 @@ x-drift/
 │   │   ├── main.ts        # Three.js renderer + WebSocket client
 │   │   ├── ship.ts        # Ship model factory (7-mesh X-wing shape)
 │   │   ├── starfield.ts   # Particle-based starfield that follows the camera
-│   │   └── celestial.ts   # Sun and planet renderer from server data
+│   │   ├── celestial.ts   # Sun and planet renderer from server data
+│   │   ├── projectile.ts  # Projectile beam renderer (synced from server state)
+│   │   └── hitEffect.ts   # Hit flash effect on damaged ships
 
 │   ├── package.json
 │   └── tsconfig.json
@@ -98,6 +100,7 @@ Open `http://localhost:5173` in your browser. You can open multiple tabs to simu
 | S / Arrow Down | Brake (decelerate to 0, never reverses) |
 | A / Arrow Left | Roll left |
 | D / Arrow Right | Roll right |
+| Left click (while locked) | Fire projectile (~3 shots/sec) |
 
 Releasing W keeps the current speed (no friction). A debug bar at the top of the screen shows position and speed.
 
@@ -109,21 +112,22 @@ All messages are JSON over WebSocket.
 
 | Message | Fields | Description |
 |---------|--------|-------------|
-| `input` | `seq`, `keys`, `mouseDx`, `mouseDy` | Currently pressed keys and accumulated mouse deltas |
+| `input` | `seq`, `keys`, `mouseDx`, `mouseDy`, `fire` | Currently pressed keys, accumulated mouse deltas, and fire intent |
 
 ### Server → Client
 
 | Message | Fields | Description |
 |---------|--------|-------------|
 | `welcome` | `playerId`, `celestialBodies[]` | Sent on connection, assigns a player ID and world geometry |
-| `state` | `players[]` | World snapshot with all player positions, rotations, and speed |
+| `state` | `players[]`, `projectiles[]` | World snapshot with all player and projectile positions |
+| `hit` | `targetId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
 
 ## Roadmap
 
 1. ~~**3D movement with rotation**~~ — Full 3D flight with mouse look (pointer lock), pitch/yaw, roll (A/D), acceleration-based thrust (W to accelerate, S to brake, coasting when no key pressed), chase camera, and a debug HUD showing position and speed.
 2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
 3. ~~**Space environment**~~ — Starfield background, server-defined sun (with glow and point light) and planets (with optional rings) as spatial reference points.
-4. **Shooting** — Players fire projectiles. The server tracks them, computes trajectories, and detects collisions against other ships.
+4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit. No HP yet.
 5. **Health and eliminations** — Ships have health points. Hits reduce HP, reaching zero triggers death and respawn.
 6. **HUD** — 2D overlay showing health, score, and connected players.
 7. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.

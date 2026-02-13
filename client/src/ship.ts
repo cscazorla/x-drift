@@ -105,3 +105,7 @@ export function removeShip(scene: THREE.Scene, id: string): void {
 export function getShipIds(): IterableIterator<string> {
   return shipCache.keys();
 }
+
+export function getShip(id: string): THREE.Group | undefined {
+  return shipCache.get(id);
+}
