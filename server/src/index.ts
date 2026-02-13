@@ -101,6 +101,7 @@ const celestialBodies: CelestialBody[] = [
 
 interface Player {
   id: string;
+  name: string;
   ws: WebSocket;
   x: number;
   y: number;
@@ -130,6 +131,29 @@ const players = new Map<string, Player>();
 let nextId = 1;
 const npcs: NPC[] = createAllNPCs();
 const npcRespawnTimers = new Map<string, number>();
+
+// ---- Name pool ----
+
+const ICONIC_NAMES = [
+  'Maverick', 'Skywalker', 'Viper', 'Phoenix', 'Blaze', 'Nova', 'Shadow',
+  'Falcon', 'Storm', 'Rogue', 'Titan', 'Eclipse', 'Spectre', 'Cobra', 'Apex',
+  'Bolt', 'Drift', 'Fury', 'Havoc', 'Ace', 'Ghost', 'Nebula', 'Orion',
+  'Zenith', 'Cipher', 'Jinx', 'Neon', 'Pulse', 'Razor', 'Warp',
+];
+
+const usedNames = new Set<string>();
+
+function assignName(id: string): string {
+  const available = ICONIC_NAMES.filter(n => !usedNames.has(n));
+  if (available.length === 0) return `Pilot-${id}`;
+  const name = available[Math.floor(Math.random() * available.length)];
+  usedNames.add(name);
+  return name;
+}
+
+function releaseName(name: string): void {
+  usedNames.delete(name);
+}
 
 // ---- Lobby (connected but haven't picked a team yet) ----
 
@@ -188,11 +212,13 @@ wss.on('connection', (ws) => {
         lobby.delete(ws);
 
         const id = String(nextId++);
+        const name = assignName(id);
         const spawn = randomSpawnPosition();
         const team = msg.team === 1 ? 1 : 0;
 
         const player: Player = {
           id,
+          name,
           ws,
           x: spawn.x,
           y: spawn.y,
@@ -214,7 +240,7 @@ wss.on('connection', (ws) => {
         };
         players.set(id, player);
 
-        const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id, celestialBodies };
+        const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id, playerName: name, celestialBodies };
         ws.send(JSON.stringify(welcome));
 
         console.log(`Player ${id} joined team ${team} (${players.size} online)`);
@@ -250,9 +276,10 @@ wss.on('connection', (ws) => {
     // Find and remove the player
     for (const [id, player] of players) {
       if (player.ws === ws) {
+        releaseName(player.name);
         players.delete(id);
         projectiles = projectiles.filter((p) => p.ownerId !== id);
-        console.log(`Player ${id} disconnected (${players.size} online)`);
+        console.log(`Player ${id} (${player.name}) disconnected (${players.size} online)`);
         broadcastTeamInfo();
         break;
       }
@@ -333,8 +360,14 @@ function tick() {
   // 5. Apply damage → get kills
   const kills = applyDamage(hits, allEntities);
 
-  // Set respawn timers and update scores for newly killed entities
+  // Enrich kill messages with display names
   const npcById = new Map(npcs.map((n) => [n.id, n]));
+  for (const kill of kills) {
+    kill.attackerName = players.get(kill.attackerId)?.name ?? kill.attackerId;
+    kill.targetName = players.get(kill.targetId)?.name ?? kill.targetId;
+  }
+
+  // Set respawn timers and update scores for newly killed entities
   for (const kill of kills) {
     const targetPlayer = players.get(kill.targetId);
     if (targetPlayer) {
@@ -394,6 +427,7 @@ function tick() {
     const npc = npcById.get(p.id);
     playerStates.push({
       id: p.id,
+      name: humanPlayer?.name ?? p.id,
       x: p.x,
       y: p.y,
       z: p.z,

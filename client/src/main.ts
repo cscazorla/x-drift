@@ -42,9 +42,9 @@ document.body.appendChild(renderer.domElement);
 
 // Basic lighting
 scene.add(new THREE.AmbientLight(0x445566, 0.8));
-const dirLight = new THREE.DirectionalLight(0xfff5e6, 1);
-dirLight.position.set(50, 30, 50);
-scene.add(dirLight);
+const sunLight = new THREE.PointLight(0xfff5e6, 3, 0, 0);
+sunLight.position.set(0, 0, 0);
+scene.add(sunLight);
 
 // Bloom post-processing
 const composer = new EffectComposer(renderer);
@@ -151,7 +151,7 @@ async function init() {
       myPlayerId = msg.playerId;
       const sunPos = createCelestialBodies(scene, msg.celestialBodies);
       if (sunPos) {
-        dirLight.position.copy(sunPos);
+        sunLight.position.copy(sunPos);
       }
       console.log(`Joined as player ${myPlayerId}`);
 
@@ -241,7 +241,7 @@ async function init() {
 
     if (msg.type === MessageType.Kill) {
       triggerDeathExplosion(msg.targetId);
-      addKillEntry(msg.attackerId, msg.targetId, myPlayerId);
+      addKillEntry(msg.attackerId, msg.attackerName, msg.targetId, msg.targetName, myPlayerId);
       if (msg.targetId === myPlayerId) {
         localDead = true;
         respawnCountdown = RESPAWN_TIME;

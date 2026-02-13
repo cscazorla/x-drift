@@ -209,6 +209,8 @@ export function applyDamage(
         type: MessageType.Kill,
         targetId: hit.targetId,
         attackerId: hit.attackerId,
+        attackerName: '',
+        targetName: '',
         x: target.x,
         y: target.y,
         z: target.z,

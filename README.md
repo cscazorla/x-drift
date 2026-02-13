@@ -179,10 +179,11 @@ All messages are JSON over WebSocket.
 | `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
 
 ## Roadmap
-- Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly
 - Add a trail to the ships when they are moving (speed > 0)
-- When ships clash they die automatically
-- Players get named by numbers. They should have random names similar to Maverick and similar
+- When ships clash they die automatically. They also die if they clash with a celestial body
+- Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly. Maybe use this for rolling buttons?
 - Move to 3d models (kenney assets)
-- Client-side interpolation — Smooth movement between server snapshots so motion doesn't look choppy.
 - Ship upgrades — As players score eliminations, their ship improves (speed, damage, etc.).
+- Players can keep the fire button pressed (no need to release and click again). If you keep it pressed too long it saturates and no longer fires.
+- If NPCs noticed they are far away from the sun (position 0, 0, 0) they go back to the sun and when they around 100 units near the sun, they start wandering again until they find a new target.
+- Client-side interpolation — Smooth movement between server snapshots so motion doesn't look choppy.

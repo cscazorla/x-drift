@@ -56,7 +56,7 @@ export function updateScoreboard(
   let html =
     '<div style="border-top:1px solid #444;padding-top:4px;margin-top:2px;display:flex;gap:8px;margin-bottom:4px;color:#888">' +
     '<span style="width:20px">#</span>' +
-    '<span style="flex:1">ID</span>' +
+    '<span style="flex:1">Name</span>' +
     '<span style="width:32px;text-align:right">K</span>' +
     '<span style="width:32px;text-align:right">D</span>' +
     '</div>';
@@ -70,7 +70,7 @@ export function updateScoreboard(
     html +=
       `<div style="display:flex;gap:8px;color:${color};background:${bg};padding:1px 0">` +
       `<span style="width:20px">${i + 1}</span>` +
-      `<span style="flex:1">${dot} ${p.id}</span>` +
+      `<span style="flex:1">${dot} ${p.name}</span>` +
       `<span style="width:32px;text-align:right">${p.kills}</span>` +
       `<span style="width:32px;text-align:right">${p.deaths}</span>` +
       '</div>';
@@ -86,7 +86,7 @@ export function updateScoreboard(
         '<div style="border-top:1px solid #444;margin-top:4px;padding-top:4px;' +
         'display:flex;gap:8px;color:#ffdd44;background:rgba(255,221,68,0.1)">' +
         `<span style="width:20px">${rank}</span>` +
-        `<span style="flex:1">${dot} ${me.id}</span>` +
+        `<span style="flex:1">${dot} ${me.name}</span>` +
         `<span style="width:32px;text-align:right">${me.kills}</span>` +
         `<span style="width:32px;text-align:right">${me.deaths}</span>` +
         '</div>';
