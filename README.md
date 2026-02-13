@@ -187,3 +187,4 @@ All messages are JSON over WebSocket.
 - Players can keep the fire button pressed (no need to release and click again). If you keep it pressed too long it saturates and no longer fires.
 - If NPCs noticed they are far away from the sun (position 0, 0, 0) they go back to the sun and when they around 100 units near the sun, they start wandering again until they find a new target.
 - Client-side interpolation — Smooth movement between server snapshots so motion doesn't look choppy.
+- Add power ups (health packs, armour/shield, nitro, etc.)

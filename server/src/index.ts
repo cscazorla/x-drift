@@ -24,6 +24,8 @@ import {
   moveProjectiles,
   detectCollisions,
   applyDamage,
+  detectShipShipCollisions,
+  detectCelestialCollisions,
 } from './game.js';
 import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
 
@@ -314,6 +316,10 @@ function tick() {
     }
   }
 
+  // 2b. Ship–ship and ship–celestial-body collisions
+  const shipShipKills = detectShipShipCollisions([...players.values(), ...npcs]);
+  const celestialKills = detectCelestialCollisions([...players.values(), ...npcs], celestialBodies);
+
   // 3. Spawn projectiles: skip dead players
   for (const player of players.values()) {
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
@@ -359,16 +365,20 @@ function tick() {
 
   // 5. Apply damage → get kills
   const kills = applyDamage(hits, allEntities);
+  const allKills = [...kills, ...shipShipKills, ...celestialKills];
 
   // Enrich kill messages with display names
   const npcById = new Map(npcs.map((n) => [n.id, n]));
-  for (const kill of kills) {
-    kill.attackerName = players.get(kill.attackerId)?.name ?? kill.attackerId;
+  for (const kill of allKills) {
+    // Only overwrite attackerName when attackerId is non-empty (preserve environmental names)
+    if (kill.attackerId) {
+      kill.attackerName = players.get(kill.attackerId)?.name ?? kill.attackerId;
+    }
     kill.targetName = players.get(kill.targetId)?.name ?? kill.targetId;
   }
 
   // Set respawn timers and update scores for newly killed entities
-  for (const kill of kills) {
+  for (const kill of allKills) {
     const targetPlayer = players.get(kill.targetId);
     if (targetPlayer) {
       targetPlayer.respawnTimer = RESPAWN_TIME;
@@ -378,12 +388,15 @@ function tick() {
       const targetNpc = npcById.get(kill.targetId);
       if (targetNpc) targetNpc.deaths += 1;
     }
-    const attackerPlayer = players.get(kill.attackerId);
-    if (attackerPlayer) {
-      attackerPlayer.kills += 1;
-    } else {
-      const attackerNpc = npcById.get(kill.attackerId);
-      if (attackerNpc) attackerNpc.kills += 1;
+    // Only credit kills when there's a real attacker (skip environmental deaths)
+    if (kill.attackerId) {
+      const attackerPlayer = players.get(kill.attackerId);
+      if (attackerPlayer) {
+        attackerPlayer.kills += 1;
+      } else {
+        const attackerNpc = npcById.get(kill.attackerId);
+        if (attackerNpc) attackerNpc.kills += 1;
+      }
     }
   }
 
@@ -463,7 +476,7 @@ function tick() {
   };
   const payload = JSON.stringify(stateMsg);
   const hitPayloads = hits.map((h) => JSON.stringify(h));
-  const killPayloads = kills.map((k) => JSON.stringify(k));
+  const killPayloads = allKills.map((k) => JSON.stringify(k));
 
   for (const player of players.values()) {
     if (player.ws.readyState === WebSocket.OPEN) {

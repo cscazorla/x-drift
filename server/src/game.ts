@@ -10,7 +10,9 @@ import {
   PROJECTILE_LIFETIME,
   FIRE_COOLDOWN,
   PROJECTILE_HIT_RADIUS,
+  SHIP_COLLISION_RADIUS,
   MAX_PROJECTILES_PER_PLAYER,
+  type CelestialBody,
   type HitMessage,
   type KillMessage,
 } from '@x-drift/shared';
@@ -215,6 +217,84 @@ export function applyDamage(
         y: target.y,
         z: target.z,
       });
+    }
+  }
+  return kills;
+}
+
+/** Detect ship–ship collisions. Both ships die instantly. */
+export function detectShipShipCollisions(entities: PlayerLike[]): KillMessage[] {
+  const kills: KillMessage[] = [];
+  const shipRadiusSq = (2 * SHIP_COLLISION_RADIUS) * (2 * SHIP_COLLISION_RADIUS);
+
+  for (let i = 0; i < entities.length; i++) {
+    const a = entities[i];
+    if (a.hp <= 0) continue;
+    for (let j = i + 1; j < entities.length; j++) {
+      const b = entities[j];
+      if (b.hp <= 0) continue;
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dz = a.z - b.z;
+      const distSq = dx * dx + dy * dy + dz * dz;
+      if (distSq <= shipRadiusSq) {
+        a.hp = 0;
+        a.speed = 0;
+        b.hp = 0;
+        b.speed = 0;
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        const mz = (a.z + b.z) / 2;
+        kills.push({
+          type: MessageType.Kill,
+          targetId: a.id,
+          attackerId: b.id,
+          attackerName: '',
+          targetName: '',
+          x: mx, y: my, z: mz,
+        });
+        kills.push({
+          type: MessageType.Kill,
+          targetId: b.id,
+          attackerId: a.id,
+          attackerName: '',
+          targetName: '',
+          x: mx, y: my, z: mz,
+        });
+      }
+    }
+  }
+  return kills;
+}
+
+/** Detect ship–celestial-body collisions. Ship dies instantly. */
+export function detectCelestialCollisions(
+  entities: PlayerLike[],
+  bodies: CelestialBody[],
+): KillMessage[] {
+  const kills: KillMessage[] = [];
+
+  for (const entity of entities) {
+    if (entity.hp <= 0) continue;
+    for (const body of bodies) {
+      const threshold = body.radius + SHIP_COLLISION_RADIUS;
+      const dx = entity.x - body.x;
+      const dy = entity.y - body.y;
+      const dz = entity.z - body.z;
+      const distSq = dx * dx + dy * dy + dz * dz;
+      if (distSq <= threshold * threshold) {
+        entity.hp = 0;
+        entity.speed = 0;
+        kills.push({
+          type: MessageType.Kill,
+          targetId: entity.id,
+          attackerId: '',
+          attackerName: body.type === 'sun' ? 'the Sun' : 'a planet',
+          targetName: '',
+          x: entity.x, y: entity.y, z: entity.z,
+        });
+        break; // entity is dead, no need to check other bodies
+      }
     }
   }
   return kills;

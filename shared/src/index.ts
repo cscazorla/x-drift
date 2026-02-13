@@ -149,6 +149,7 @@ export const PROJECTILE_SPEED = 40; // units/second
 export const PROJECTILE_LIFETIME = 3; // seconds
 export const FIRE_COOLDOWN = 0.3; // seconds
 export const PROJECTILE_HIT_RADIUS = 1; // units
+export const SHIP_COLLISION_RADIUS = 1.5; // units — ship-ship when 2×this, ship-body when body.radius + this
 export const MAX_PROJECTILES_PER_PLAYER = 10;
 
 // Health / respawn constants
