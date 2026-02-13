@@ -56,7 +56,7 @@ export function updateScoreboard(
     `<span style="color:#888">${teamKills[0]}K / ${teamDeaths[0]}D</span>` +
     `</div>` +
     `<div style="display:flex;gap:6px;align-items:center">` +
-    `<span style="color:${TEAM_CSS_COLORS[1]}">&#9679; BLUE (${teamCount[1]})</span>` +
+    `<span style="color:${TEAM_CSS_COLORS[1]}">&#9679; RED (${teamCount[1]})</span>` +
     `<span style="color:#888">${teamKills[1]}K / ${teamDeaths[1]}D</span>` +
     `</div>`;
 

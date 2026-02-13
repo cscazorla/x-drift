@@ -25,7 +25,7 @@ export interface NPC extends PlayerLike {
   wanderTimer: number;  // countdown to next direction change
   kills: number;
   deaths: number;
-  team: number;         // 0 = green, 1 = blue
+  team: number;         // 0 = green, 1 = red
 }
 
 // ---- Factory functions ----
