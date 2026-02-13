@@ -83,6 +83,7 @@ export interface PlayerState {
   hp: number;
   kills: number;
   deaths: number;
+  thrustState: 'idle' | 'forward' | 'brake';
 }
 
 export interface StateMessage {
@@ -139,7 +140,7 @@ export const RESPAWN_TIME = 5; // seconds
 export const SCOREBOARD_SIZE = 10;
 
 // NPC constants
-export const NPC_COUNT = 150;
+export const NPC_COUNT = 75;
 export const NPC_TURN_RATE = 400;           // max mouse-delta units for steering
 export const NPC_WANDER_INTERVAL_MIN = 2;   // seconds
 export const NPC_WANDER_INTERVAL_MAX = 5;   // seconds

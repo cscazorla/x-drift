@@ -322,6 +322,9 @@ function tick() {
       hp: p.hp,
       kills: humanPlayer?.kills ?? npc?.kills ?? 0,
       deaths: humanPlayer?.deaths ?? npc?.deaths ?? 0,
+      thrustState: (p.keys['w'] || p.keys['ArrowUp']) ? 'forward' as const
+        : (p.keys['s'] || p.keys['ArrowDown']) ? 'brake' as const
+        : 'idle' as const,
     });
   }
 

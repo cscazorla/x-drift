@@ -12,7 +12,7 @@ import {
   type InputMessage,
   type PlayerState,
 } from '@x-drift/shared';
-import { getOrCreateShip, removeShip, getShipIds } from './ship';
+import { getOrCreateShip, removeShip, getShipIds, setThrustState } from './ship';
 import { createStarfield } from './starfield';
 import { createCelestialBodies } from './celestial';
 import { updateProjectiles } from './projectile';
@@ -179,6 +179,7 @@ ws.addEventListener('message', (event) => {
       // Manage visibility based on hp (death explosion handles its own hiding)
       if (p.hp > 0) ship.visible = true;
       else if (p.hp <= 0) ship.visible = false;
+      setThrustState(p.id, p.thrustState);
     }
 
     // Update projectile meshes
