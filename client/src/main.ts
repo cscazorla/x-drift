@@ -71,7 +71,7 @@ window.addEventListener('resize', () => {
 
 const debugBar = document.createElement('div');
 debugBar.style.cssText =
-  'position:fixed;top:0;left:0;width:100%;padding:4px 8px;' +
+  'position:fixed;bottom:0;left:0;width:100%;padding:4px 8px;' +
   'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none';
 document.body.appendChild(debugBar);
 
