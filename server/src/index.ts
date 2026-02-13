@@ -117,6 +117,7 @@ interface Player {
   respawnTimer: number;
   kills: number;
   deaths: number;
+  team: number;
 }
 
 // ---- State ----
@@ -152,6 +153,12 @@ const wss = new WebSocketServer({ port: SERVER_PORT });
 wss.on('connection', (ws) => {
   const id = String(nextId++);
   const spawn = randomSpawnPosition();
+
+  // Pick team with fewer members
+  const team0 = [...players.values()].filter(p => p.team === 0).length + npcs.filter(n => n.team === 0).length;
+  const team1 = [...players.values()].filter(p => p.team === 1).length + npcs.filter(n => n.team === 1).length;
+  const team = team0 <= team1 ? 0 : 1;
+
   const player: Player = {
     id,
     ws,
@@ -171,6 +178,7 @@ wss.on('connection', (ws) => {
     respawnTimer: 0,
     kills: 0,
     deaths: 0,
+    team,
   };
   players.set(id, player);
 
@@ -217,7 +225,9 @@ function tick() {
   }
 
   // 2. NPC AI: skip dead NPCs
-  const aliveForAI = [...players.values(), ...npcs].filter(e => e.hp > 0);
+  const aliveForAI = [...players.values(), ...npcs]
+    .filter(e => e.hp > 0)
+    .map(e => ({ id: e.id, x: e.x, y: e.y, z: e.z, hp: e.hp, team: e.team }));
   for (const npc of npcs) {
     if (npc.hp > 0) {
       updateNPCAI(npc, dt, aliveForAI);
@@ -260,8 +270,12 @@ function tick() {
   const allEntities = [...players.values(), ...npcs];
   const aliveTargets = allEntities
     .filter((p) => p.hp > 0)
-    .map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z }));
-  const { survivors, hits } = detectCollisions(projectiles, aliveTargets);
+    .map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z, team: p.team }));
+
+  const teamByOwner = new Map<string, number>();
+  for (const p of players.values()) teamByOwner.set(p.id, p.team);
+  for (const n of npcs) teamByOwner.set(n.id, n.team);
+  const { survivors, hits } = detectCollisions(projectiles, aliveTargets, teamByOwner);
   projectiles = survivors;
 
   // 5. Apply damage → get kills
@@ -341,6 +355,7 @@ function tick() {
       thrustState: (p.keys['w'] || p.keys['ArrowUp']) ? 'forward' as const
         : (p.keys['s'] || p.keys['ArrowDown']) ? 'brake' as const
         : 'idle' as const,
+      team: humanPlayer?.team ?? npc?.team ?? 0,
     });
   }
 

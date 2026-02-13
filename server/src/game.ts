@@ -140,12 +140,14 @@ export interface CollisionTarget {
   x: number;
   y: number;
   z: number;
+  team: number;
 }
 
 /** Detect projectile–player collisions. Returns surviving projectiles and hit messages. */
 export function detectCollisions(
   projectiles: Projectile[],
   targets: CollisionTarget[],
+  teamByOwner?: Map<string, number>,
 ): { survivors: Projectile[]; hits: HitMessage[] } {
   const survivors: Projectile[] = [];
   const hits: HitMessage[] = [];
@@ -155,6 +157,9 @@ export function detectCollisions(
     let hit = false;
     for (const target of targets) {
       if (target.id === p.ownerId) continue; // skip self
+      // Skip same-team targets (friendly fire prevention)
+      const ownerTeam = teamByOwner?.get(p.ownerId);
+      if (ownerTeam !== undefined && target.team === ownerTeam) continue;
       const dx = p.x - target.x;
       const dy = p.y - target.y;
       const dz = p.z - target.z;

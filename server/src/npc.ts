@@ -25,11 +25,12 @@ export interface NPC extends PlayerLike {
   wanderTimer: number;  // countdown to next direction change
   kills: number;
   deaths: number;
+  team: number;         // 0 = green, 1 = blue
 }
 
 // ---- Factory functions ----
 
-export function createNPC(id: string): NPC {
+export function createNPC(id: string, team: number): NPC {
   const spawnAngle = Math.random() * 2 * Math.PI;
   const spawnRadius = 30 + Math.random() * 50;
   const skill = NPC_MIN_SKILL + Math.random() * (NPC_MAX_SKILL - NPC_MIN_SKILL);
@@ -55,13 +56,14 @@ export function createNPC(id: string): NPC {
     wanderTimer: NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN),
     kills: 0,
     deaths: 0,
+    team,
   };
 }
 
 export function createAllNPCs(): NPC[] {
   const npcs: NPC[] = [];
   for (let i = 1; i <= NPC_COUNT; i++) {
-    npcs.push(createNPC(`npc-${i}`));
+    npcs.push(createNPC(`npc-${i}`, i % 2));  // alternating teams
   }
   return npcs;
 }
@@ -92,10 +94,10 @@ function normalizeAngle(a: number): number {
   return a;
 }
 
-/** Find the nearest alive entity within NPC_DETECTION_RANGE, excluding self. */
+/** Find the nearest alive enemy entity within NPC_DETECTION_RANGE, excluding self and teammates. */
 export function findNearestTarget(
   npc: NPC,
-  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number }>,
+  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number; team: number }>,
 ): { id: string; x: number; y: number; z: number } | null {
   const rangeSq = NPC_DETECTION_RANGE * NPC_DETECTION_RANGE;
   const minRangeSq = NPC_MIN_COMBAT_RANGE * NPC_MIN_COMBAT_RANGE;
@@ -103,7 +105,7 @@ export function findNearestTarget(
   let bestDistSq = Infinity;
 
   for (const e of allEntities) {
-    if (e.id === npc.id || e.hp <= 0) continue;
+    if (e.id === npc.id || e.hp <= 0 || e.team === npc.team) continue;
     const dx = e.x - npc.x;
     const dy = e.y - npc.y;
     const dz = e.z - npc.z;
@@ -123,7 +125,7 @@ export function findNearestTarget(
 export function updateNPCAI(
   npc: NPC,
   dt: number,
-  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number }>,
+  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number; team: number }>,
 ): void {
   const target = findNearestTarget(npc, allEntities);
 

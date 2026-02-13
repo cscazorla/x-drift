@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { ProjectileState } from '@x-drift/shared';
+import { teamColors } from './ship';
 
 const projectileCache = new Map<number, THREE.Mesh>();
 
@@ -13,13 +14,11 @@ const sharedGeometry = new THREE.CylinderGeometry(
 // Shift so the cylinder's origin is at its tail (beam extends forward)
 sharedGeometry.translate(0, BEAM_LENGTH / 2, 0);
 
-const sharedMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffee44,
-  emissive: 0xffee44,
-  emissiveIntensity: 1.5,
-  transparent: true,
-  opacity: 0.9,
-});
+const teamMaterials = teamColors.map(c =>
+  new THREE.MeshStandardMaterial({
+    color: c.glow, emissive: c.glow, emissiveIntensity: 1.5, transparent: true, opacity: 0.9,
+  }),
+);
 
 const _up = new THREE.Vector3(0, 1, 0);
 const _dir = new THREE.Vector3();
@@ -27,6 +26,7 @@ const _dir = new THREE.Vector3();
 export function updateProjectiles(
   scene: THREE.Scene,
   states: ProjectileState[],
+  teamByOwner: Map<string, number>,
 ): void {
   const activeIds = new Set(states.map((s) => s.id));
 
@@ -42,7 +42,8 @@ export function updateProjectiles(
   for (const s of states) {
     let mesh = projectileCache.get(s.id);
     if (!mesh) {
-      mesh = new THREE.Mesh(sharedGeometry, sharedMaterial);
+      const team = teamByOwner.get(s.ownerId) ?? 0;
+      mesh = new THREE.Mesh(sharedGeometry, teamMaterials[team]);
       scene.add(mesh);
       projectileCache.set(s.id, mesh);
     }

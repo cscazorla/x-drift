@@ -254,8 +254,9 @@ describe('moveProjectiles', () => {
 describe('detectCollisions', () => {
   it('projectile within HIT_RADIUS of target → hit, projectile removed', () => {
     const proj = makeProjectile({ ownerId: 'attacker', x: 0, y: 0, z: 0 });
-    const target = { id: 'target', x: 0.5, y: 0, z: 0 }; // dist = 0.5 < 1
-    const { survivors, hits } = detectCollisions([proj], [target]);
+    const target = { id: 'target', x: 0.5, y: 0, z: 0, team: 1 }; // dist = 0.5 < 1
+    const teamByOwner = new Map([['attacker', 0]]);
+    const { survivors, hits } = detectCollisions([proj], [target], teamByOwner);
     expect(survivors).toHaveLength(0);
     expect(hits).toHaveLength(1);
     expect(hits[0].targetId).toBe('target');
@@ -263,7 +264,7 @@ describe('detectCollisions', () => {
 
   it('projectile beyond HIT_RADIUS → miss, projectile survives', () => {
     const proj = makeProjectile({ ownerId: 'attacker', x: 0, y: 0, z: 0 });
-    const target = { id: 'target', x: 5, y: 0, z: 0 }; // dist = 5 > 1
+    const target = { id: 'target', x: 5, y: 0, z: 0, team: 1 }; // dist = 5 > 1
     const { survivors, hits } = detectCollisions([proj], [target]);
     expect(survivors).toHaveLength(1);
     expect(hits).toHaveLength(0);
@@ -271,7 +272,7 @@ describe('detectCollisions', () => {
 
   it('projectile near owner → skipped (no self-hit)', () => {
     const proj = makeProjectile({ ownerId: 'p1', x: 0, y: 0, z: 0 });
-    const owner = { id: 'p1', x: 0, y: 0, z: 0 }; // same pos, same owner
+    const owner = { id: 'p1', x: 0, y: 0, z: 0, team: 0 }; // same pos, same owner
     const { survivors, hits } = detectCollisions([proj], [owner]);
     expect(survivors).toHaveLength(1);
     expect(hits).toHaveLength(0);
@@ -280,8 +281,9 @@ describe('detectCollisions', () => {
   it('multiple projectiles, one hits → only that one removed', () => {
     const p1 = makeProjectile({ id: 1, ownerId: 'a', x: 0, y: 0, z: 0 });
     const p2 = makeProjectile({ id: 2, ownerId: 'a', x: 100, y: 100, z: 100 });
-    const target = { id: 'b', x: 0.5, y: 0, z: 0 };
-    const { survivors, hits } = detectCollisions([p1, p2], [target]);
+    const target = { id: 'b', x: 0.5, y: 0, z: 0, team: 1 };
+    const teamByOwner = new Map([['a', 0]]);
+    const { survivors, hits } = detectCollisions([p1, p2], [target], teamByOwner);
     expect(hits).toHaveLength(1);
     expect(hits[0].projectileId).toBe(1);
     expect(survivors).toHaveLength(1);
@@ -290,8 +292,9 @@ describe('detectCollisions', () => {
 
   it('hit message has correct position', () => {
     const proj = makeProjectile({ ownerId: 'a', x: 3, y: 4, z: 5 });
-    const target = { id: 'b', x: 3.1, y: 4, z: 5 };
-    const { hits } = detectCollisions([proj], [target]);
+    const target = { id: 'b', x: 3.1, y: 4, z: 5, team: 1 };
+    const teamByOwner = new Map([['a', 0]]);
+    const { hits } = detectCollisions([proj], [target], teamByOwner);
     expect(hits[0].x).toBe(3);
     expect(hits[0].y).toBe(4);
     expect(hits[0].z).toBe(5);
@@ -300,16 +303,43 @@ describe('detectCollisions', () => {
   it('projectile exactly at HIT_RADIUS distance → hit (<=)', () => {
     // HIT_RADIUS = 1, so dist = 1 should count as a hit
     const proj = makeProjectile({ ownerId: 'a', x: 0, y: 0, z: 0 });
-    const target = { id: 'b', x: 1, y: 0, z: 0 };
-    const { hits } = detectCollisions([proj], [target]);
+    const target = { id: 'b', x: 1, y: 0, z: 0, team: 1 };
+    const teamByOwner = new Map([['a', 0]]);
+    const { hits } = detectCollisions([proj], [target], teamByOwner);
     expect(hits).toHaveLength(1);
   });
 
   it('HitMessage includes attackerId matching projectile owner', () => {
     const proj = makeProjectile({ ownerId: 'attacker', x: 0, y: 0, z: 0 });
-    const target = { id: 'target', x: 0.5, y: 0, z: 0 };
-    const { hits } = detectCollisions([proj], [target]);
+    const target = { id: 'target', x: 0.5, y: 0, z: 0, team: 1 };
+    const teamByOwner = new Map([['attacker', 0]]);
+    const { hits } = detectCollisions([proj], [target], teamByOwner);
     expect(hits[0].attackerId).toBe('attacker');
+  });
+
+  it('projectile from team 0 does not hit team 0 target (friendly fire prevention)', () => {
+    const proj = makeProjectile({ ownerId: 'a', x: 0, y: 0, z: 0 });
+    const target = { id: 'b', x: 0.5, y: 0, z: 0, team: 0 };
+    const teamByOwner = new Map([['a', 0]]);
+    const { survivors, hits } = detectCollisions([proj], [target], teamByOwner);
+    expect(hits).toHaveLength(0);
+    expect(survivors).toHaveLength(1);
+  });
+
+  it('projectile from team 0 hits team 1 target', () => {
+    const proj = makeProjectile({ ownerId: 'a', x: 0, y: 0, z: 0 });
+    const target = { id: 'b', x: 0.5, y: 0, z: 0, team: 1 };
+    const teamByOwner = new Map([['a', 0]]);
+    const { survivors, hits } = detectCollisions([proj], [target], teamByOwner);
+    expect(hits).toHaveLength(1);
+    expect(survivors).toHaveLength(0);
+  });
+
+  it('friendly fire prevention disabled when no teamByOwner provided', () => {
+    const proj = makeProjectile({ ownerId: 'a', x: 0, y: 0, z: 0 });
+    const target = { id: 'b', x: 0.5, y: 0, z: 0, team: 0 };
+    const { hits } = detectCollisions([proj], [target]);
+    expect(hits).toHaveLength(1);
   });
 });
 

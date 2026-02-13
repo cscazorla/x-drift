@@ -171,9 +171,13 @@ ws.addEventListener('message', (event) => {
       if (!activeIds.has(id)) removeShip(scene, id);
     }
 
+    // Build team lookup for projectile coloring
+    const teamByOwner = new Map<string, number>();
+    for (const p of msg.players) teamByOwner.set(p.id, p.team);
+
     // Update positions and rotations
     for (const p of msg.players) {
-      const ship = getOrCreateShip(scene, p.id, p.id === myPlayerId);
+      const ship = getOrCreateShip(scene, p.id, p.team, p.id === myPlayerId);
       ship.position.set(p.x, p.y, p.z);
       ship.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
       // Manage visibility based on hp (death explosion handles its own hiding)
@@ -183,7 +187,7 @@ ws.addEventListener('message', (event) => {
     }
 
     // Update projectile meshes
-    updateProjectiles(scene, msg.projectiles);
+    updateProjectiles(scene, msg.projectiles, teamByOwner);
 
     // Chase camera follows the local player
     if (myPlayerId) {

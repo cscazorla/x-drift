@@ -37,6 +37,7 @@ function makeNPC(overrides: Partial<NPC> = {}): NPC {
     wanderTimer: 3,
     kills: 0,
     deaths: 0,
+    team: 0,
     ...overrides,
   };
 }
@@ -45,7 +46,7 @@ function makeNPC(overrides: Partial<NPC> = {}): NPC {
 
 describe('createNPC', () => {
   it('returns NPC with given id, zero speed, fire=false', () => {
-    const npc = createNPC('npc-42');
+    const npc = createNPC('npc-42', 0);
     expect(npc.id).toBe('npc-42');
     expect(npc.speed).toBe(0);
     expect(npc.fire).toBe(false);
@@ -53,14 +54,14 @@ describe('createNPC', () => {
 
   it('skill within [NPC_MIN_SKILL, NPC_MAX_SKILL]', () => {
     for (let i = 0; i < 20; i++) {
-      const npc = createNPC(`npc-${i}`);
+      const npc = createNPC(`npc-${i}`, i % 2);
       expect(npc.skill).toBeGreaterThanOrEqual(NPC_MIN_SKILL);
       expect(npc.skill).toBeLessThanOrEqual(NPC_MAX_SKILL);
     }
   });
 
   it('has positive wanderTimer', () => {
-    const npc = createNPC('npc-1');
+    const npc = createNPC('npc-1', 0);
     expect(npc.wanderTimer).toBeGreaterThan(0);
   });
 });
@@ -158,9 +159,9 @@ describe('updateNPCAI combat', () => {
     const npc = makeNPC({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, skill: 1.0 });
     // Place target directly ahead along -z axis (yaw=0 → forward is -z)
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'enemy-1', x: 0, y: 0, z: -20, hp: MAX_HP },
-      { id: 'enemy-2', x: 0, y: 0, z: -50, hp: MAX_HP },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'enemy-1', x: 0, y: 0, z: -20, hp: MAX_HP, team: 1 },
+      { id: 'enemy-2', x: 0, y: 0, z: -50, hp: MAX_HP, team: 1 },
     ];
     updateNPCAI(npc, dt, entities);
     // Should aim at enemy-1 (closer) → targetYaw should be ~0 (straight ahead on -z)
@@ -169,7 +170,7 @@ describe('updateNPCAI combat', () => {
 
   it('ignores self', () => {
     const npc = makeNPC({ x: 0, y: 0, z: 0 });
-    const entities = [{ id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP }];
+    const entities = [{ id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 }];
     const target = findNearestTarget(npc, entities);
     expect(target).toBeNull();
   });
@@ -177,8 +178,8 @@ describe('updateNPCAI combat', () => {
   it('ignores dead entities', () => {
     const npc = makeNPC({ x: 0, y: 0, z: 0 });
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'dead-1', x: 10, y: 0, z: 0, hp: 0 },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'dead-1', x: 10, y: 0, z: 0, hp: 0, team: 1 },
     ];
     const target = findNearestTarget(npc, entities);
     expect(target).toBeNull();
@@ -187,8 +188,8 @@ describe('updateNPCAI combat', () => {
   it('ignores entities too close (within min combat range)', () => {
     const npc = makeNPC({ x: 0, y: 0, z: 0 });
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'close-1', x: NPC_MIN_COMBAT_RANGE * 0.5, y: 0, z: 0, hp: MAX_HP },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'close-1', x: NPC_MIN_COMBAT_RANGE * 0.5, y: 0, z: 0, hp: MAX_HP, team: 1 },
     ];
     const target = findNearestTarget(npc, entities);
     expect(target).toBeNull();
@@ -197,8 +198,8 @@ describe('updateNPCAI combat', () => {
   it('ignores entities out of range', () => {
     const npc = makeNPC({ x: 0, y: 0, z: 0 });
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'far-1', x: NPC_DETECTION_RANGE + 10, y: 0, z: 0, hp: MAX_HP },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'far-1', x: NPC_DETECTION_RANGE + 10, y: 0, z: 0, hp: MAX_HP, team: 1 },
     ];
     const target = findNearestTarget(npc, entities);
     expect(target).toBeNull();
@@ -208,8 +209,8 @@ describe('updateNPCAI combat', () => {
     // Place target exactly along forward direction (yaw=0 → forward is (0,0,-1))
     const npc = makeNPC({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0, skill: 1.0 });
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'enemy', x: 0, y: 0, z: -20, hp: MAX_HP },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'enemy', x: 0, y: 0, z: -20, hp: MAX_HP, team: 1 },
     ];
     updateNPCAI(npc, dt, entities);
     // Target is directly ahead, aim error ≈ 0 which is < threshold
@@ -220,8 +221,8 @@ describe('updateNPCAI combat', () => {
     // Place target far to the side — NPC facing +z but target at +x
     const npc = makeNPC({ x: 0, y: 0, z: 0, yaw: Math.PI, pitch: 0, skill: 1.0 });
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'enemy', x: 30, y: 0, z: 0, hp: MAX_HP },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'enemy', x: 30, y: 0, z: 0, hp: MAX_HP, team: 1 },
     ];
     updateNPCAI(npc, dt, entities);
     // Target is 90° off to the side, aim error >> threshold
@@ -234,11 +235,33 @@ describe('updateNPCAI combat', () => {
     expect(thresholdLow).toBeGreaterThan(thresholdHigh);
   });
 
+  it('ignores same-team entities', () => {
+    const npc = makeNPC({ x: 0, y: 0, z: 0, team: 0 });
+    const entities = [
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'teammate', x: 10, y: 0, z: 0, hp: MAX_HP, team: 0 },
+    ];
+    const target = findNearestTarget(npc, entities);
+    expect(target).toBeNull();
+  });
+
+  it('targets enemy-team entity, ignores same-team', () => {
+    const npc = makeNPC({ x: 0, y: 0, z: 0, team: 0 });
+    const entities = [
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'teammate', x: 10, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'enemy', x: 15, y: 0, z: 0, hp: MAX_HP, team: 1 },
+    ];
+    const target = findNearestTarget(npc, entities);
+    expect(target).not.toBeNull();
+    expect(target!.id).toBe('enemy');
+  });
+
   it('resets wanderTimer in combat mode', () => {
     const npc = makeNPC({ x: 0, y: 0, z: 0, wanderTimer: 5.0 });
     const entities = [
-      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP },
-      { id: 'enemy', x: 10, y: 0, z: 0, hp: MAX_HP },
+      { id: 'npc-test', x: 0, y: 0, z: 0, hp: MAX_HP, team: 0 },
+      { id: 'enemy', x: 10, y: 0, z: 0, hp: MAX_HP, team: 1 },
     ];
     updateNPCAI(npc, dt, entities);
     expect(npc.wanderTimer).toBe(0);

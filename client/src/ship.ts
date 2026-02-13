@@ -5,14 +5,28 @@ const shipGlowColor = new Map<string, number>();
 
 const BRAKE_COLOR = 0xff2200;
 
+export const teamColors = [
+  { primary: 0x00ff88, accent: 0x006633, glow: 0x00ffcc },  // green
+  { primary: 0x4488ff, accent: 0x113366, glow: 0x66aaff },  // blue
+];
+
+// Brighter variants for the local player
+const localTeamColors = [
+  { primary: 0x66ffbb, accent: 0x009955, glow: 0x88ffdd },  // bright green
+  { primary: 0x88bbff, accent: 0x3366aa, glow: 0xaaccff },  // bright blue
+];
+
 function createShip(
   scene: THREE.Scene,
   id: string,
+  team: number,
   isLocal: boolean,
 ): THREE.Group {
-  const primary = isLocal ? 0x00ff88 : 0xff4444;
-  const accent = isLocal ? 0x006633 : 0x661111;
-  const glow = isLocal ? 0x00ffcc : 0xff6600;
+  const palette = isLocal ? localTeamColors : teamColors;
+  const c = palette[team] ?? palette[0];
+  const primary = c.primary;
+  const accent = c.accent;
+  const glow = c.glow;
 
   const group = new THREE.Group();
 
@@ -88,9 +102,10 @@ function createShip(
 export function getOrCreateShip(
   scene: THREE.Scene,
   id: string,
+  team: number,
   isLocal: boolean,
 ): THREE.Group {
-  return shipCache.get(id) ?? createShip(scene, id, isLocal);
+  return shipCache.get(id) ?? createShip(scene, id, team, isLocal);
 }
 
 export function removeShip(scene: THREE.Scene, id: string): void {

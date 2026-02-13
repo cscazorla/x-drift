@@ -84,6 +84,7 @@ export interface PlayerState {
   kills: number;
   deaths: number;
   thrustState: 'idle' | 'forward' | 'brake';
+  team: number;  // 0 = green, 1 = blue
 }
 
 export interface StateMessage {

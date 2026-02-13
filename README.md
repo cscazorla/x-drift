@@ -1,6 +1,6 @@
 # X-Drift
 
-Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship that upgrades as they eliminate enemies.
+Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship in team deathmatch — Green vs Blue — competing to outscore the enemy team.
 
 ## Tech Stack
 
@@ -164,19 +164,11 @@ All messages are JSON over WebSocket.
 | Message | Fields | Description |
 |---------|--------|-------------|
 | `welcome` | `playerId`, `celestialBodies[]` | Sent on connection, assigns a player ID and world geometry |
-| `state` | `players[]` (incl. `hp`, `kills`, `deaths`), `projectiles[]` | World snapshot with all player/NPC positions and scores |
+| `state` | `players[]` (incl. `hp`, `kills`, `deaths`, `team`), `projectiles[]` | World snapshot with all player/NPC positions, scores, and team |
 | `hit` | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
 | `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
 
 ## Roadmap
 
-1. ~~**3D movement with rotation**~~ — Full 3D flight with mouse look (pointer lock), pitch/yaw, roll (A/D), acceleration-based thrust (W to accelerate, S to brake, coasting when no key pressed), chase camera, and a debug HUD showing position and speed.
-2. ~~**Ship model**~~ — Replace placeholder box with a 7-mesh X-wing-style ship (fuselage, nose cone, wings, engines, exhaust glow) using Three.js primitives, with green/red color schemes for local/remote players.
-3. ~~**Space environment**~~ — Starfield background, server-defined sun (with glow and point light) and planets (with optional rings) as spatial reference points.
-4. ~~**Shooting**~~ — Left-click fires light-beam projectiles (server-authoritative, 300ms cooldown, 3s lifetime, 40 u/s). Point-vs-sphere collision detection with a brief white flash on hit.
-5. ~~**NPC ships**~~ — Server-controlled NPC ships with wander and combat AI at skill-dependent speeds (capped at 70% of player max speed). NPCs reuse the `PlayerLike` interface — AI simulates input each tick, then existing physics runs unchanged. Appear as red ships to all players.
-6. ~~**Health and eliminations**~~ — Ships have 4 HP. Each hit deals 1 damage. At 0 HP: death explosion (white flash + scale-up), kill feed entry, and respawn after 5 seconds. Dead ships freeze and become invisible. The local player sees a "DESTROYED" overlay with countdown. Both players and NPCs have health and respawn.
-7. ~~**HUD**~~ — Server-authoritative kill/death tracking for players and NPCs. Always-visible top-10 scoreboard (top-left) sorted by kills, with the local player highlighted in yellow. Shows connected human player count.
-8. ~~**NPC combat**~~ — NPCs detect nearby entities (within 50 units), steer toward the closest target, and fire when their aim is within a skill-based threshold. Higher-skill NPCs aim more precisely but all NPCs shoot slower than players (0.8s vs 0.3s cooldown) and are capped at 70% max speed, giving players a clear advantage. A minimum combat range (5 units) prevents NPCs from deadlocking at point-blank range.
-9. **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
-10. **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
+- **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
+- **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
