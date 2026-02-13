@@ -11,6 +11,7 @@ Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship 
 | Server runtime | Node.js + tsx | Game server with hot reload in dev |
 | WebSocket | ws (server) / native WebSocket (client) | Real-time bidirectional communication |
 | Language | TypeScript | Shared types across client and server |
+| Testing | Vitest | Server-side unit tests |
 | Package management | npm workspaces | Monorepo with shared dependencies |
 
 ## Repository Structure
@@ -33,7 +34,11 @@ x-drift/
 │   └── tsconfig.json
 ├── server/                # Authoritative game server (Node.js + ws)
 │   ├── src/
-│   │   └── index.ts       # WebSocket server + game loop
+│   │   ├── index.ts       # WebSocket server + game loop
+│   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions)
+│   │   └── __tests__/
+│   │       └── game.test.ts
+│   ├── vitest.config.ts
 │   ├── package.json
 │   └── tsconfig.json
 └── shared/                # Types and constants shared by client and server
@@ -89,6 +94,12 @@ npm run dev --workspace=client
 ```
 
 Open `http://localhost:5173` in your browser. You can open multiple tabs to simulate multiple players.
+
+### Run Tests
+
+```bash
+npm test --workspace=server
+```
 
 ## Controls
 

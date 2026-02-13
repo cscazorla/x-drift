@@ -3,17 +3,7 @@ import {
   MessageType,
   SERVER_PORT,
   TICK_RATE,
-  MAX_SPEED,
-  ACCELERATION,
-  BRAKE_FORCE,
-  MOUSE_SENSITIVITY,
-  MAX_PITCH,
-  ROLL_SPEED,
-  PROJECTILE_SPEED,
-  PROJECTILE_LIFETIME,
   FIRE_COOLDOWN,
-  PROJECTILE_HIT_RADIUS,
-  MAX_PROJECTILES_PER_PLAYER,
   type CelestialBody,
   type ClientMessage,
   type PlayerState,
@@ -22,6 +12,13 @@ import {
   type HitMessage,
   type WelcomeMessage,
 } from '@x-drift/shared';
+import {
+  type Projectile,
+  updatePlayerMovement,
+  spawnProjectile,
+  moveProjectiles,
+  detectCollisions,
+} from './game.js';
 
 // ---- Celestial bodies ----
 
@@ -61,29 +58,15 @@ interface Player {
   roll: number;
   speed: number;
   keys: Record<string, boolean>;
-  /** Accumulated mouse deltas (summed between ticks) */
   mouseDx: number;
   mouseDy: number;
-  /** True if any input since last tick requested fire */
   fire: boolean;
   fireCooldown: number;
 }
 
-// ---- Projectile tracking ----
+// ---- State ----
 
-interface Projectile {
-  id: number;
-  ownerId: string;
-  x: number;
-  y: number;
-  z: number;
-  dx: number;
-  dy: number;
-  dz: number;
-  age: number;
-}
-
-const projectiles: Projectile[] = [];
+let projectiles: Projectile[] = [];
 let nextProjectileId = 1;
 
 const players = new Map<string, Player>();
@@ -133,10 +116,8 @@ wss.on('connection', (ws) => {
       const msg: ClientMessage = JSON.parse(String(raw));
       if (msg.type === MessageType.Input) {
         player.keys = msg.keys;
-        // Accumulate mouse deltas — multiple messages may arrive between ticks
         player.mouseDx += msg.mouseDx;
         player.mouseDy += msg.mouseDy;
-        // Sticky fire: if any message between ticks says fire, the player fires
         if (msg.fire) player.fire = true;
       }
     } catch {
@@ -146,10 +127,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     players.delete(id);
-    // Remove all projectiles owned by this player
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-      if (projectiles[i].ownerId === id) projectiles.splice(i, 1);
-    }
+    projectiles = projectiles.filter((p) => p.ownerId !== id);
     console.log(`Player ${id} disconnected (${players.size} online)`);
   });
 });
@@ -159,108 +137,31 @@ wss.on('connection', (ws) => {
 const dt = 1 / TICK_RATE;
 
 function tick() {
+  // Update player movement
   for (const player of players.values()) {
-    // 1. Apply mouse rotation
-    player.yaw -= player.mouseDx * MOUSE_SENSITIVITY;
-    player.pitch -= player.mouseDy * MOUSE_SENSITIVITY;
-    player.pitch = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, player.pitch));
-
-    // Reset accumulated mouse deltas
-    player.mouseDx = 0;
-    player.mouseDy = 0;
-
-    // 2. Apply roll from A/D (visual only — does not affect forward vector)
-    const rollingLeft = player.keys['a'] || player.keys['ArrowLeft'];
-    const rollingRight = player.keys['d'] || player.keys['ArrowRight'];
-    if (rollingLeft) player.roll += ROLL_SPEED * dt;
-    else if (rollingRight) player.roll -= ROLL_SPEED * dt;
-    else player.roll *= Math.pow(0.05, dt); // lerp toward 0
-
-    // 3. Compute forward vector from yaw + pitch
-    const forwardX = -Math.sin(player.yaw) * Math.cos(player.pitch);
-    const forwardY = Math.sin(player.pitch);
-    const forwardZ = -Math.cos(player.yaw) * Math.cos(player.pitch);
-
-    // 4. Update speed based on input (no friction — speed holds when coasting)
-    if (player.keys['w'] || player.keys['ArrowUp']) {
-      player.speed = Math.min(player.speed + ACCELERATION * dt, MAX_SPEED);
-    } else if (player.keys['s'] || player.keys['ArrowDown']) {
-      player.speed = Math.max(player.speed - BRAKE_FORCE * dt, 0);
-    }
-
-    // 5. Move along forward vector at current speed
-    player.x += forwardX * player.speed * dt;
-    player.y += forwardY * player.speed * dt;
-    player.z += forwardZ * player.speed * dt;
+    updatePlayerMovement(player, dt);
   }
 
-  // ---- Spawn projectiles ----
+  // Spawn projectiles
   for (const player of players.values()) {
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
-    if (player.fire && player.fireCooldown <= 0) {
-      // Count live projectiles for this player
-      let count = 0;
-      for (const p of projectiles) {
-        if (p.ownerId === player.id) count++;
-      }
-      if (count < MAX_PROJECTILES_PER_PLAYER) {
-        const fx = -Math.sin(player.yaw) * Math.cos(player.pitch);
-        const fy = Math.sin(player.pitch);
-        const fz = -Math.cos(player.yaw) * Math.cos(player.pitch);
-        projectiles.push({
-          id: nextProjectileId++,
-          ownerId: player.id,
-          x: player.x + fx * 0.95,
-          y: player.y + fy * 0.95,
-          z: player.z + fz * 0.95,
-          dx: fx,
-          dy: fy,
-          dz: fz,
-          age: 0,
-        });
-        player.fireCooldown = FIRE_COOLDOWN;
-      }
+    const count = projectiles.filter((p) => p.ownerId === player.id).length;
+    const proj = spawnProjectile(player, count, nextProjectileId);
+    if (proj) {
+      projectiles.push(proj);
+      nextProjectileId++;
+      player.fireCooldown = FIRE_COOLDOWN;
     }
     player.fire = false;
   }
 
-  // ---- Move projectiles & expire ----
-  for (let i = projectiles.length - 1; i >= 0; i--) {
-    const p = projectiles[i];
-    p.x += p.dx * PROJECTILE_SPEED * dt;
-    p.y += p.dy * PROJECTILE_SPEED * dt;
-    p.z += p.dz * PROJECTILE_SPEED * dt;
-    p.age += dt;
-    if (p.age >= PROJECTILE_LIFETIME) {
-      projectiles.splice(i, 1);
-    }
-  }
+  // Move projectiles & expire
+  projectiles = moveProjectiles(projectiles, dt);
 
-  // ---- Collision detection ----
-  const hitMessages: HitMessage[] = [];
-  const hitRadiusSq = PROJECTILE_HIT_RADIUS * PROJECTILE_HIT_RADIUS;
-  for (let i = projectiles.length - 1; i >= 0; i--) {
-    const p = projectiles[i];
-    for (const target of players.values()) {
-      if (target.id === p.ownerId) continue; // skip self
-      const dx = p.x - target.x;
-      const dy = p.y - target.y;
-      const dz = p.z - target.z;
-      const distSq = dx * dx + dy * dy + dz * dz;
-      if (distSq <= hitRadiusSq) {
-        hitMessages.push({
-          type: MessageType.Hit,
-          targetId: target.id,
-          projectileId: p.id,
-          x: p.x,
-          y: p.y,
-          z: p.z,
-        });
-        projectiles.splice(i, 1);
-        break;
-      }
-    }
-  }
+  // Collision detection
+  const targets = [...players.values()].map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z }));
+  const { survivors, hits } = detectCollisions(projectiles, targets);
+  projectiles = survivors;
 
   // Broadcast state
   const playerStates: PlayerState[] = [];
@@ -294,7 +195,7 @@ function tick() {
     projectiles: projectileStates,
   };
   const payload = JSON.stringify(stateMsg);
-  const hitPayloads = hitMessages.map((h) => JSON.stringify(h));
+  const hitPayloads = hits.map((h) => JSON.stringify(h));
 
   for (const player of players.values()) {
     if (player.ws.readyState === WebSocket.OPEN) {
