@@ -3,8 +3,10 @@ const FADE_TIME = 3000; // ms
 const container = document.createElement('div');
 container.style.cssText =
   'position:fixed;top:8px;right:8px;display:flex;flex-direction:column;' +
-  'align-items:flex-end;gap:4px;z-index:1000;pointer-events:none';
+  'align-items:flex-end;gap:4px;z-index:1000;pointer-events:none;display:none';
 document.body.appendChild(container);
+
+export { container as killFeedContainer };
 
 export function addKillEntry(attackerId: string, targetId: string, myPlayerId: string | null): void {
   const el = document.createElement('div');

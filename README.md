@@ -140,7 +140,7 @@ npm test --workspace=server
 | Input | Action |
 |-------|--------|
 | Click | Lock mouse pointer (enables look) |
-| Mouse | Yaw and pitch |
+| Mouse | Steer ship |
 | W / Arrow Up | Accelerate forward (max 10 u/s) |
 | S / Arrow Down | Brake (decelerate to 0, never reverses) |
 | A / Arrow Left | Roll left |
@@ -169,6 +169,11 @@ All messages are JSON over WebSocket.
 | `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
 
 ## Roadmap
-
-- **Client-side interpolation** — Smooth movement between server snapshots so motion doesn't look choppy.
-- **Ship upgrades** — As players score eliminations, their ship improves (speed, damage, etc.).
+- In the welcome screen the player can pick the team
+- Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly
+- Add a trail to the ships when they are moving (speed > 0)
+- When ships clash they die automatically
+- Players get named by numbers. They should have random names similar to Maverick and similar
+- Move to 3d models (kenney assets)
+- Client-side interpolation — Smooth movement between server snapshots so motion doesn't look choppy.
+- Ship upgrades — As players score eliminations, their ship improves (speed, damage, etc.).

@@ -9,8 +9,10 @@ const container = document.createElement('div');
 container.style.cssText =
   'position:fixed;top:28px;left:8px;z-index:1000;pointer-events:none;' +
   'background:rgba(0,0,0,0.7);padding:8px 12px;border-radius:4px;' +
-  'font:12px monospace;color:#ccc;min-width:220px';
+  'font:12px monospace;color:#ccc;min-width:220px;display:none';
 document.body.appendChild(container);
+
+export { container as scoreboardContainer };
 
 const headerEl = document.createElement('div');
 headerEl.style.cssText = 'color:#0f0;margin-bottom:6px;font-weight:bold';

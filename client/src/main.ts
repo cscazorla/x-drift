@@ -17,8 +17,9 @@ import { createStarfield } from './starfield';
 import { createCelestialBodies } from './celestial';
 import { updateProjectiles } from './projectile';
 import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
-import { addKillEntry } from './killFeed';
-import { updateScoreboard } from './scoreboard';
+import { addKillEntry, killFeedContainer } from './killFeed';
+import { updateScoreboard, scoreboardContainer } from './scoreboard';
+import { showWelcomeScreen } from './welcome';
 
 // ---- Three.js setup ----
 
@@ -72,7 +73,7 @@ window.addEventListener('resize', () => {
 const debugBar = document.createElement('div');
 debugBar.style.cssText =
   'position:fixed;bottom:0;left:0;width:100%;padding:4px 8px;' +
-  'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none';
+  'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none;display:none';
 document.body.appendChild(debugBar);
 
 // ---- Death overlay ----
@@ -97,188 +98,7 @@ let myPlayerId: string | null = null;
 let localDead = false;
 let respawnCountdown = 0;
 
-// ---- Input tracking ----
-
-const keys: Record<string, boolean> = {};
-let inputSeq = 0;
-
-// Mouse delta accumulators (reset after each input send)
-let accumulatedDx = 0;
-let accumulatedDy = 0;
-
-// Fire intent (reset after each input send)
-let fireIntent = false;
-
-window.addEventListener('keydown', (e) => {
-  keys[e.key] = true;
-});
-window.addEventListener('keyup', (e) => {
-  keys[e.key] = false;
-});
-
-// ---- Pointer Lock ----
-
-const canvas = renderer.domElement;
-
-canvas.addEventListener('click', () => {
-  canvas.requestPointerLock();
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (document.pointerLockElement === canvas) {
-    accumulatedDx += e.movementX;
-    accumulatedDy -= e.movementY;
-  }
-});
-
-document.addEventListener('mousedown', (e) => {
-  if (e.button === 0 && document.pointerLockElement === canvas) {
-    fireIntent = true;
-  }
-});
-
-// ---- Chase camera constants ----
-
-const CAM_DIST = 8;
-const CAM_HEIGHT = 3;
-
-// ---- WebSocket connection ----
-
-const ws = new WebSocket(`ws://localhost:${SERVER_PORT}`);
-
-ws.addEventListener('open', () => {
-  console.log('Connected to server');
-});
-
-ws.addEventListener('message', (event) => {
-  const msg: ServerMessage = JSON.parse(String(event.data));
-
-  if (msg.type === MessageType.Welcome) {
-    myPlayerId = msg.playerId;
-    const sunPos = createCelestialBodies(scene, msg.celestialBodies);
-    if (sunPos) {
-      dirLight.position.copy(sunPos);
-    }
-    console.log(`Joined as player ${myPlayerId}`);
-    return;
-  }
-
-  if (msg.type === MessageType.State) {
-    const activeIds = new Set(msg.players.map((p: PlayerState) => p.id));
-
-    // Remove players that left
-    for (const id of getShipIds()) {
-      if (!activeIds.has(id)) removeShip(scene, id);
-    }
-
-    // Build team lookup for projectile coloring
-    const teamByOwner = new Map<string, number>();
-    for (const p of msg.players) teamByOwner.set(p.id, p.team);
-
-    // Update positions and rotations
-    for (const p of msg.players) {
-      const ship = getOrCreateShip(scene, p.id, p.team, p.id === myPlayerId);
-      ship.position.set(p.x, p.y, p.z);
-      ship.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
-      // Manage visibility based on hp (death explosion handles its own hiding)
-      if (p.hp > 0) ship.visible = true;
-      else if (p.hp <= 0) ship.visible = false;
-      setThrustState(p.id, p.thrustState);
-    }
-
-    // Update projectile meshes
-    updateProjectiles(scene, msg.projectiles, teamByOwner);
-
-    // Chase camera follows the local player
-    if (myPlayerId) {
-      const me = msg.players.find((p: PlayerState) => p.id === myPlayerId);
-      if (me) {
-        // Detect respawn: was dead, now alive
-        if (localDead && me.hp > 0) {
-          localDead = false;
-          respawnCountdown = 0;
-          deathOverlay.style.display = 'none';
-        }
-
-        // Only update camera if alive (freeze when dead)
-        if (me.hp > 0) {
-          // Forward vector (same formula as server)
-          const forwardX = -Math.sin(me.yaw) * Math.cos(me.pitch);
-          const forwardY = Math.sin(me.pitch);
-          const forwardZ = -Math.cos(me.yaw) * Math.cos(me.pitch);
-
-          // Camera behind the ship
-          camera.position.set(
-            me.x - forwardX * CAM_DIST,
-            me.y - forwardY * CAM_DIST + CAM_HEIGHT,
-            me.z - forwardZ * CAM_DIST,
-          );
-
-          // Look at a point ahead of the ship
-          camera.lookAt(
-            me.x + forwardX * 4,
-            me.y + forwardY * 4,
-            me.z + forwardZ * 4,
-          );
-        }
-
-        // Keep starfield centred on camera
-        stars.position.copy(camera.position);
-
-        // Update debug bar
-        debugBar.textContent =
-          `hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
-      }
-
-      // Update scoreboard
-      updateScoreboard(msg.players, myPlayerId);
-    }
-  }
-
-  if (msg.type === MessageType.Hit) {
-    triggerHitFlash(msg.targetId);
-  }
-
-  if (msg.type === MessageType.Kill) {
-    triggerDeathExplosion(msg.targetId);
-    addKillEntry(msg.attackerId, msg.targetId, myPlayerId);
-    if (msg.targetId === myPlayerId) {
-      localDead = true;
-      respawnCountdown = RESPAWN_TIME;
-      deathOverlay.style.display = 'flex';
-      deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
-    }
-  }
-});
-
-ws.addEventListener('close', () => {
-  console.log('Disconnected from server');
-});
-
-// ---- Send input to server at a fixed rate ----
-
-setInterval(() => {
-  if (ws.readyState === WebSocket.OPEN) {
-    // Suppress input when dead
-    const dead = localDead;
-    const msg: InputMessage = {
-      type: MessageType.Input,
-      seq: inputSeq++,
-      keys: dead ? {} : { ...keys },
-      mouseDx: dead ? 0 : accumulatedDx,
-      mouseDy: dead ? 0 : accumulatedDy,
-      fire: dead ? false : fireIntent,
-    };
-    ws.send(JSON.stringify(msg));
-
-    // Reset accumulators after sending
-    accumulatedDx = 0;
-    accumulatedDy = 0;
-    fireIntent = false;
-  }
-}, 1000 / TICK_RATE);
-
-// ---- Render loop ----
+// ---- Render loop (runs during welcome screen for starfield background) ----
 
 const clock = new THREE.Clock();
 
@@ -297,3 +117,197 @@ function animate() {
 }
 
 animate();
+
+// ---- Game init (deferred until welcome screen is dismissed) ----
+
+async function init() {
+  await showWelcomeScreen();
+
+  // Show HUD elements
+  debugBar.style.display = '';
+  scoreboardContainer.style.display = '';
+  killFeedContainer.style.display = 'flex';
+
+  // ---- Input tracking ----
+
+  const keys: Record<string, boolean> = {};
+  let inputSeq = 0;
+
+  // Mouse delta accumulators (reset after each input send)
+  let accumulatedDx = 0;
+  let accumulatedDy = 0;
+
+  // Fire intent (reset after each input send)
+  let fireIntent = false;
+
+  window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+  });
+
+  // ---- Pointer Lock ----
+
+  const canvas = renderer.domElement;
+
+  canvas.addEventListener('click', () => {
+    canvas.requestPointerLock();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === canvas) {
+      accumulatedDx += e.movementX;
+      accumulatedDy -= e.movementY;
+    }
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && document.pointerLockElement === canvas) {
+      fireIntent = true;
+    }
+  });
+
+  // ---- Chase camera constants ----
+
+  const CAM_DIST = 8;
+  const CAM_HEIGHT = 3;
+
+  // ---- WebSocket connection ----
+
+  const ws = new WebSocket(`ws://localhost:${SERVER_PORT}`);
+
+  ws.addEventListener('open', () => {
+    console.log('Connected to server');
+  });
+
+  ws.addEventListener('message', (event) => {
+    const msg: ServerMessage = JSON.parse(String(event.data));
+
+    if (msg.type === MessageType.Welcome) {
+      myPlayerId = msg.playerId;
+      const sunPos = createCelestialBodies(scene, msg.celestialBodies);
+      if (sunPos) {
+        dirLight.position.copy(sunPos);
+      }
+      console.log(`Joined as player ${myPlayerId}`);
+      return;
+    }
+
+    if (msg.type === MessageType.State) {
+      const activeIds = new Set(msg.players.map((p: PlayerState) => p.id));
+
+      // Remove players that left
+      for (const id of getShipIds()) {
+        if (!activeIds.has(id)) removeShip(scene, id);
+      }
+
+      // Build team lookup for projectile coloring
+      const teamByOwner = new Map<string, number>();
+      for (const p of msg.players) teamByOwner.set(p.id, p.team);
+
+      // Update positions and rotations
+      for (const p of msg.players) {
+        const ship = getOrCreateShip(scene, p.id, p.team, p.id === myPlayerId);
+        ship.position.set(p.x, p.y, p.z);
+        ship.rotation.set(p.pitch, p.yaw, p.roll, 'YXZ');
+        // Manage visibility based on hp (death explosion handles its own hiding)
+        if (p.hp > 0) ship.visible = true;
+        else if (p.hp <= 0) ship.visible = false;
+        setThrustState(p.id, p.thrustState);
+      }
+
+      // Update projectile meshes
+      updateProjectiles(scene, msg.projectiles, teamByOwner);
+
+      // Chase camera follows the local player
+      if (myPlayerId) {
+        const me = msg.players.find((p: PlayerState) => p.id === myPlayerId);
+        if (me) {
+          // Detect respawn: was dead, now alive
+          if (localDead && me.hp > 0) {
+            localDead = false;
+            respawnCountdown = 0;
+            deathOverlay.style.display = 'none';
+          }
+
+          // Only update camera if alive (freeze when dead)
+          if (me.hp > 0) {
+            // Forward vector (same formula as server)
+            const forwardX = -Math.sin(me.yaw) * Math.cos(me.pitch);
+            const forwardY = Math.sin(me.pitch);
+            const forwardZ = -Math.cos(me.yaw) * Math.cos(me.pitch);
+
+            // Camera behind the ship
+            camera.position.set(
+              me.x - forwardX * CAM_DIST,
+              me.y - forwardY * CAM_DIST + CAM_HEIGHT,
+              me.z - forwardZ * CAM_DIST,
+            );
+
+            // Look at a point ahead of the ship
+            camera.lookAt(
+              me.x + forwardX * 4,
+              me.y + forwardY * 4,
+              me.z + forwardZ * 4,
+            );
+          }
+
+          // Keep starfield centred on camera
+          stars.position.copy(camera.position);
+
+          // Update debug bar
+          debugBar.textContent =
+            `hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
+        }
+
+        // Update scoreboard
+        updateScoreboard(msg.players, myPlayerId);
+      }
+    }
+
+    if (msg.type === MessageType.Hit) {
+      triggerHitFlash(msg.targetId);
+    }
+
+    if (msg.type === MessageType.Kill) {
+      triggerDeathExplosion(msg.targetId);
+      addKillEntry(msg.attackerId, msg.targetId, myPlayerId);
+      if (msg.targetId === myPlayerId) {
+        localDead = true;
+        respawnCountdown = RESPAWN_TIME;
+        deathOverlay.style.display = 'flex';
+        deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
+      }
+    }
+  });
+
+  ws.addEventListener('close', () => {
+    console.log('Disconnected from server');
+  });
+
+  // ---- Send input to server at a fixed rate ----
+
+  setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      // Suppress input when dead
+      const dead = localDead;
+      const msg: InputMessage = {
+        type: MessageType.Input,
+        seq: inputSeq++,
+        keys: dead ? {} : { ...keys },
+        mouseDx: dead ? 0 : accumulatedDx,
+        mouseDy: dead ? 0 : accumulatedDy,
+        fire: dead ? false : fireIntent,
+      };
+      ws.send(JSON.stringify(msg));
+
+      // Reset accumulators after sending
+      accumulatedDx = 0;
+      accumulatedDy = 0;
+      fireIntent = false;
+    }
+  }, 1000 / TICK_RATE);
+}
+
+init();
