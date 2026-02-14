@@ -65,20 +65,6 @@ x-drift/
 
 The game uses an **authoritative server** model to prevent cheating:
 
-```
-Client                             Server
-──────                             ──────
-Captures input (keyboard + mouse)
-  → sends via WebSocket →          Receives input from all players
-                                   Runs game loop (60 ticks/sec):
-                                     - Applies player inputs
-                                     - Updates NPC AI (simulates inputs)
-                                     - Computes physics (positions, collisions)
-                                     - Updates world state
-  ← receives via WebSocket ←      Broadcasts state snapshot to each client
-Renders state with Three.js
-```
-
 - The **client** only captures player input and renders the state received from the server.
 - The **server** is the single source of truth. It processes all inputs, runs the physics simulation, and sends the resulting world state back to every connected client.
 
