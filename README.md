@@ -1,5 +1,7 @@
 # X-Drift
 
+![x-drift](screenshots/welcome.png)
+
 Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship in team deathmatch — Green vs Red — competing to outscore the enemy team. On the welcome screen, players choose which team to join while seeing live member counts.
 
 ## Tech Stack
