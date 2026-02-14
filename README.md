@@ -49,7 +49,8 @@ x-drift/
 │   │   └── __tests__/
 │   │       ├── game.test.ts
 │   │       ├── math.test.ts
-│   │       └── npc.test.ts
+│   │       ├── npc.test.ts
+│   │       └── spawn.test.ts
 │   ├── vitest.config.ts
 │   ├── package.json
 │   └── tsconfig.json
