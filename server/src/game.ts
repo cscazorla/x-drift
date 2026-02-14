@@ -11,6 +11,10 @@ import {
   PROJECTILE_HIT_RADIUS,
   SHIP_COLLISION_RADIUS,
   MAX_PROJECTILES_PER_PLAYER,
+  HEAT_PER_SHOT,
+  HEAT_DECAY_RATE,
+  OVERHEAT_THRESHOLD,
+  OVERHEAT_RECOVERY,
   type CelestialBody,
   type HitMessage,
   type KillMessage,
@@ -46,6 +50,8 @@ export interface PlayerLike {
   mouseDy: number;
   fire: boolean;
   fireCooldown: number;
+  heat: number;
+  overheated: boolean;
 }
 
 // ---- Pure functions ----
@@ -103,7 +109,12 @@ export function spawnProjectile(
   projectileCount: number,
   nextId: number,
 ): Projectile | null {
-  if (!player.fire || player.fireCooldown > 0 || projectileCount >= MAX_PROJECTILES_PER_PLAYER) {
+  if (
+    !player.fire ||
+    player.fireCooldown > 0 ||
+    player.overheated ||
+    projectileCount >= MAX_PROJECTILES_PER_PLAYER
+  ) {
     return null;
   }
   const fwd = computeForward(player.yaw, player.pitch);
@@ -310,4 +321,25 @@ export function detectCelestialCollisions(
     }
   }
   return kills;
+}
+
+/** Update heat: decay over time, add heat on shot, trigger/clear overheat. Mutates in place. */
+export function updateHeat(player: PlayerLike, dt: number, justFired: boolean): void {
+  // Decay heat
+  player.heat = Math.max(0, player.heat - HEAT_DECAY_RATE * dt);
+
+  // Add heat from firing
+  if (justFired) {
+    player.heat = Math.min(OVERHEAT_THRESHOLD, player.heat + HEAT_PER_SHOT);
+  }
+
+  // Enter overheat
+  if (player.heat >= OVERHEAT_THRESHOLD) {
+    player.overheated = true;
+  }
+
+  // Exit overheat
+  if (player.overheated && player.heat <= OVERHEAT_RECOVERY) {
+    player.overheated = false;
+  }
 }

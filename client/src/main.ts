@@ -20,7 +20,8 @@ import { updateProjectiles } from './projectile';
 import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
 import { addKillEntry, killFeedContainer } from './killFeed';
 import { updateScoreboard, scoreboardContainer } from './scoreboard';
-import { crosshairContainer } from './crosshair';
+import { crosshairContainer, updateCrosshairHeat } from './crosshair';
+import { heatBarContainer, updateHeatBar } from './heatBar';
 import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
 
 // ---- Three.js setup ----
@@ -156,6 +157,7 @@ function init() {
       scoreboardContainer.style.display = '';
       killFeedContainer.style.display = 'flex';
       crosshairContainer.style.display = '';
+      heatBarContainer.style.display = '';
       return;
     }
 
@@ -195,6 +197,7 @@ function init() {
             respawnCountdown = 0;
             deathOverlay.style.display = 'none';
             crosshairContainer.style.display = '';
+            heatBarContainer.style.display = '';
           }
 
           // Only update camera if alive (freeze when dead)
@@ -213,6 +216,10 @@ function init() {
 
             // Look at a point ahead of the ship
             camera.lookAt(me.x + forwardX * 4, me.y + forwardY * 4, me.z + forwardZ * 4);
+
+            // Update heat visuals
+            updateCrosshairHeat(me.heat, me.overheated);
+            updateHeatBar(me.heat, me.overheated);
           }
 
           // Keep starfield centred on camera
@@ -220,7 +227,7 @@ function init() {
 
           // Update debug bar
           const humanCount = msg.players.filter((p) => !p.id.startsWith('npc-')).length;
-          debugBar.textContent = `players ${humanCount}  hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
+          debugBar.textContent = `players ${humanCount}  hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}  heat ${(me.heat * 100).toFixed(0)}%${me.overheated ? ' OVERHEATED' : ''}`;
         }
 
         // Update scoreboard
@@ -248,6 +255,7 @@ function init() {
         respawnCountdown = RESPAWN_TIME;
         deathOverlay.style.display = 'flex';
         crosshairContainer.style.display = 'none';
+        heatBarContainer.style.display = 'none';
         deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
       }
     }
@@ -270,8 +278,8 @@ function init() {
   let accumulatedDx = 0;
   let accumulatedDy = 0;
 
-  // Fire intent (reset after each input send)
-  let fireIntent = false;
+  // Continuous fire: held while mouse button is pressed
+  let mouseHeld = false;
 
   window.addEventListener('keydown', (e) => {
     keys[e.key] = true;
@@ -297,7 +305,19 @@ function init() {
 
   document.addEventListener('mousedown', (e) => {
     if (e.button === 0 && document.pointerLockElement === canvas) {
-      fireIntent = true;
+      mouseHeld = true;
+    }
+  });
+
+  document.addEventListener('mouseup', (e) => {
+    if (e.button === 0) {
+      mouseHeld = false;
+    }
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement !== canvas) {
+      mouseHeld = false;
     }
   });
 
@@ -318,14 +338,13 @@ function init() {
         keys: dead ? {} : { ...keys },
         mouseDx: dead ? 0 : accumulatedDx,
         mouseDy: dead ? 0 : accumulatedDy,
-        fire: dead ? false : fireIntent,
+        fire: dead ? false : mouseHeld,
       };
       ws.send(JSON.stringify(msg));
 
       // Reset accumulators after sending
       accumulatedDx = 0;
       accumulatedDy = 0;
-      fireIntent = false;
     }
   }, 1000 / TICK_RATE);
 }

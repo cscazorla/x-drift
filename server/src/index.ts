@@ -24,6 +24,7 @@ import {
   applyDamage,
   detectShipShipCollisions,
   detectCelestialCollisions,
+  updateHeat,
 } from './game.js';
 import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
 
@@ -134,6 +135,8 @@ interface Player {
   mouseDy: number;
   fire: boolean;
   fireCooldown: number;
+  heat: number;
+  overheated: boolean;
   respawnTimer: number;
   kills: number;
   deaths: number;
@@ -291,6 +294,8 @@ wss.on('connection', (ws) => {
           mouseDy: 0,
           fire: false,
           fireCooldown: 0,
+          heat: 0,
+          overheated: false,
           respawnTimer: 0,
           kills: 0,
           deaths: 0,
@@ -319,7 +324,7 @@ wss.on('connection', (ws) => {
             player.keys = msg.keys;
             player.mouseDx += msg.mouseDx;
             player.mouseDy += msg.mouseDy;
-            if (msg.fire) player.fire = true;
+            player.fire = msg.fire;
             break;
           }
         }
@@ -400,6 +405,7 @@ function tick() {
       nextProjectileId++;
       player.fireCooldown = FIRE_COOLDOWN;
     }
+    updateHeat(player, dt, proj !== null);
     player.fire = false;
   }
 
@@ -417,6 +423,7 @@ function tick() {
       nextProjectileId++;
       npc.fireCooldown = NPC_FIRE_COOLDOWN;
     }
+    updateHeat(npc, dt, proj !== null);
     npc.fire = false;
   }
 
@@ -489,6 +496,8 @@ function tick() {
         player.roll = 0;
         player.speed = 0;
         player.hp = MAX_HP;
+        player.heat = 0;
+        player.overheated = false;
         player.respawnTimer = 0;
       }
     }
@@ -533,6 +542,8 @@ function tick() {
             ? ('brake' as const)
             : ('idle' as const),
       team: humanPlayer?.team ?? npc?.team ?? 0,
+      heat: p.heat,
+      overheated: p.overheated,
     });
   }
 

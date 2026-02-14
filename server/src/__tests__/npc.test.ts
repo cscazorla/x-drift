@@ -42,6 +42,8 @@ function makeNPC(overrides: Partial<NPC> = {}): NPC {
     mouseDy: 0,
     fire: false,
     fireCooldown: 0,
+    heat: 0,
+    overheated: false,
     skill: 0.5,
     targetYaw: 0,
     targetPitch: 0,
@@ -347,5 +349,12 @@ describe('respawnNPC', () => {
     respawnNPC(npc);
     expect(npc.id).toBe('npc-42');
     expect(npc.skill).toBe(0.7);
+  });
+
+  it('resets heat and overheated', () => {
+    const npc = makeNPC({ hp: 0, heat: 0.8, overheated: true });
+    respawnNPC(npc);
+    expect(npc.heat).toBe(0);
+    expect(npc.overheated).toBe(false);
   });
 });

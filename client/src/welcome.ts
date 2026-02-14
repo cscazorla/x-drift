@@ -51,7 +51,7 @@ export function showWelcomeScreen(
     ['S / \u2193', 'Brake'],
     ['A / \u2190', 'Roll left'],
     ['D / \u2192', 'Roll right'],
-    ['Left click', 'Fire'],
+    ['Left click (hold)', 'Fire (overheats)'],
   ];
 
   for (const [key, action] of controls) {

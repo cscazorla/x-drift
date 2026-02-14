@@ -102,6 +102,8 @@ export interface PlayerState {
   deaths: number;
   thrustState: 'idle' | 'forward' | 'brake';
   team: number; // 0 = green, 1 = red
+  heat: number;
+  overheated: boolean;
 }
 
 export interface StateMessage {
@@ -180,3 +182,9 @@ export const NPC_MAX_SPEED_FACTOR = 0.7; // NPCs cap at 70% of MAX_SPEED
 export const NPC_AIM_THRESHOLD_MIN = 0.15; // ~9 deg — skill=1.0 still needs decent aim
 export const NPC_AIM_THRESHOLD_MAX = 0.5; // ~29 deg — skill=0.3 fires very loosely
 export const NPC_FIRE_COOLDOWN = 0.8; // seconds — NPCs shoot slower than players (0.3)
+
+// Heat / overheat constants
+export const HEAT_PER_SHOT = 0.15; // heat added per shot (~7 shots to overheat)
+export const HEAT_DECAY_RATE = 0.25; // heat removed per second
+export const OVERHEAT_THRESHOLD = 1.0; // heat level that triggers overheat lockout
+export const OVERHEAT_RECOVERY = 0.0; // must cool fully before firing again

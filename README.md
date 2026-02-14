@@ -153,7 +153,7 @@ npm test --workspace=server
 | S / Arrow Down            | Brake (decelerate to 0, never reverses) |
 | A / Arrow Left            | Roll left                               |
 | D / Arrow Right           | Roll right                              |
-| Left click (while locked) | Fire projectile (~3 shots/sec)          |
+| Left click (while locked) | Fire (hold to auto-fire, overheats)     |
 
 Releasing W keeps the current speed (no friction). A debug bar at the top of the screen shows HP, position, and speed.
 
@@ -170,20 +170,22 @@ All messages are JSON over WebSocket.
 
 ### Server → Client
 
-| Message    | Fields                                                               | Description                                                                                           |
-| ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `teamInfo` | `teams: [number, number]`                                            | Live team member counts (players + NPCs); sent to lobby clients on connect and whenever counts change |
-| `welcome`  | `playerId`, `celestialBodies[]`                                      | Sent after `joinTeam`, assigns a player ID and world geometry                                         |
-| `state`    | `players[]` (incl. `hp`, `kills`, `deaths`, `team`), `projectiles[]` | World snapshot with all player/NPC positions, scores, and team                                        |
-| `hit`      | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z`              | A projectile hit a ship (triggers flash effect)                                                       |
-| `kill`     | `targetId`, `attackerId`, `x`, `y`, `z`                              | A ship was destroyed (triggers death explosion, kill feed, respawn)                                   |
+| Message    | Fields                                                                                     | Description                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `teamInfo` | `teams: [number, number]`                                                                  | Live team member counts (players + NPCs); sent to lobby clients on connect and whenever counts change |
+| `welcome`  | `playerId`, `celestialBodies[]`                                                            | Sent after `joinTeam`, assigns a player ID and world geometry                                         |
+| `state`    | `players[]` (incl. `hp`, `kills`, `deaths`, `team`, `heat`, `overheated`), `projectiles[]` | World snapshot with all player/NPC positions, scores, team, and weapon heat                           |
+| `hit`      | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z`                                    | A projectile hit a ship (triggers flash effect)                                                       |
+| `kill`     | `targetId`, `attackerId`, `x`, `y`, `z`                                                    | A ship was destroyed (triggers death explosion, kill feed, respawn)                                   |
 
 ## Roadmap
 
+- Improve and consolidate player's HUD (Keep current scoreboard aside): health points, fire overheats, coordinates position, speed. It should look like a spaceship HUD. What about using progress bars, icons, etc.
+- Extract math operation (e.g. normalizeAngle) in codebase to a exportable file
 - Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly. Maybe use this for rolling buttons?
 - Move to 3d models (kenney assets)
 - Ship upgrades — As players score eliminations, their ship improves (speed, damage, etc.).
-- Players can keep the fire button pressed (no need to release and click again). If you keep it pressed too long it saturates and no longer fires.
-- If NPCs noticed they are far away from the sun (position 0, 0, 0) they go back to the sun and when they around 100 units near the sun, they start wandering again until they find a new target.
+- Improve NPCs AI:
+  - If a NPX notices he is far away from the sun (position 0, 0, 0) he should go back to the sun and, when he gets around 100 units near the sun, he starts wandering again until he finds a new target.
 - Client-side interpolation — Smooth movement between server snapshots so motion doesn't look choppy.
 - Add power ups (health packs, armour/shield, nitro, etc.)

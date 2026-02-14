@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_HP, type HitMessage } from '@x-drift/shared';
+import {
+  MAX_HP,
+  HEAT_PER_SHOT,
+  HEAT_DECAY_RATE,
+  OVERHEAT_THRESHOLD,
+  OVERHEAT_RECOVERY,
+  type HitMessage,
+} from '@x-drift/shared';
 import {
   computeForward,
   updatePlayerMovement,
@@ -7,6 +14,7 @@ import {
   moveProjectiles,
   detectCollisions,
   applyDamage,
+  updateHeat,
   type PlayerLike,
   type Projectile,
 } from '../game.js';
@@ -42,6 +50,8 @@ function makePlayer(overrides: Partial<PlayerLike> = {}): PlayerLike {
     mouseDy: 0,
     fire: false,
     fireCooldown: 0,
+    heat: 0,
+    overheated: false,
     ...overrides,
   };
 }
@@ -199,6 +209,11 @@ describe('spawnProjectile', () => {
   it('count = MAX_PROJECTILES_PER_PLAYER → returns null', () => {
     const player = makePlayer({ fire: true, fireCooldown: 0 });
     expect(spawnProjectile(player, 10, 1)).toBeNull();
+  });
+
+  it('overheated=true → returns null', () => {
+    const player = makePlayer({ fire: true, fireCooldown: 0, overheated: true });
+    expect(spawnProjectile(player, 0, 1)).toBeNull();
   });
 
   it('spawned projectile direction matches computeForward', () => {
@@ -393,5 +408,66 @@ describe('applyDamage', () => {
     const player = makePlayer({ id: 'p1', hp: 1, speed: 5 });
     applyDamage([makeHit()], [player]);
     expect(player.speed).toBe(0);
+  });
+});
+
+// ---- updateHeat ----
+
+describe('updateHeat', () => {
+  const dt = 1 / 60;
+
+  it('decays heat over time', () => {
+    const player = makePlayer({ heat: 0.5 });
+    updateHeat(player, dt, false);
+    expect(player.heat).toBeCloseTo(0.5 - HEAT_DECAY_RATE * dt);
+  });
+
+  it('heat floors at 0', () => {
+    const player = makePlayer({ heat: 0.001 });
+    updateHeat(player, 1, false); // 1 second of decay
+    expect(player.heat).toBe(0);
+  });
+
+  it('firing adds HEAT_PER_SHOT', () => {
+    const player = makePlayer({ heat: 0 });
+    updateHeat(player, dt, true);
+    // heat = max(0, 0 - HEAT_DECAY_RATE * dt) + HEAT_PER_SHOT
+    expect(player.heat).toBeCloseTo(HEAT_PER_SHOT - HEAT_DECAY_RATE * dt);
+  });
+
+  it('heat caps at OVERHEAT_THRESHOLD', () => {
+    const player = makePlayer({ heat: 0.99 });
+    updateHeat(player, dt, true);
+    expect(player.heat).toBeLessThanOrEqual(OVERHEAT_THRESHOLD);
+  });
+
+  it('enters overheat when heat reaches threshold', () => {
+    const player = makePlayer({ heat: OVERHEAT_THRESHOLD - HEAT_PER_SHOT + 0.01 });
+    updateHeat(player, 0, true); // dt=0 so no decay
+    expect(player.overheated).toBe(true);
+  });
+
+  it('exits overheat when heat drops to OVERHEAT_RECOVERY', () => {
+    const player = makePlayer({ heat: 0.001, overheated: true });
+    // Decay for long enough to reach 0
+    updateHeat(player, 1, false);
+    expect(player.heat).toBe(OVERHEAT_RECOVERY);
+    expect(player.overheated).toBe(false);
+  });
+
+  it('sustained fire triggers overheat', () => {
+    const player = makePlayer({ heat: 0 });
+    // Fire repeatedly until overheated
+    for (let i = 0; i < 20; i++) {
+      updateHeat(player, dt, true);
+      if (player.overheated) break;
+    }
+    expect(player.overheated).toBe(true);
+  });
+
+  it('stays overheated while heat is above OVERHEAT_RECOVERY', () => {
+    const player = makePlayer({ heat: 0.5, overheated: true });
+    updateHeat(player, dt, false);
+    expect(player.overheated).toBe(true);
   });
 });

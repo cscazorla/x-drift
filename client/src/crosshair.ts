@@ -33,4 +33,23 @@ container.appendChild(bottom);
 
 document.body.appendChild(container);
 
+const arms = [left, right, top, bottom];
+
+/** Update crosshair arm colors based on heat level. */
+export function updateCrosshairHeat(heat: number, overheated: boolean): void {
+  let color: string;
+  if (overheated) {
+    color = 'rgba(255,60,60,0.9)';
+  } else if (heat > 0.7) {
+    color = 'rgba(255,140,0,0.85)';
+  } else if (heat > 0.4) {
+    color = 'rgba(255,255,0,0.8)';
+  } else {
+    color = 'rgba(255,255,255,0.7)';
+  }
+  for (const arm of arms) {
+    arm.style.background = color;
+  }
+}
+
 export { container as crosshairContainer };
