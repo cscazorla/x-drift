@@ -126,6 +126,8 @@ export interface KillMessage {
   attackerId: string;
   attackerName: string;
   targetName: string;
+  attackerTeam: number;
+  targetTeam: number;
   x: number;
   y: number;
   z: number;

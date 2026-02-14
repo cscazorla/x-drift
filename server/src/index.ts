@@ -439,14 +439,17 @@ function tick() {
   const kills = applyDamage(hits, allEntities);
   const allKills = [...kills, ...shipShipKills, ...celestialKills];
 
-  // Enrich kill messages with display names
+  // Enrich kill messages with display names and team info
   const npcById = new Map(npcs.map((n) => [n.id, n]));
   for (const kill of allKills) {
     // Only overwrite attackerName when attackerId is non-empty (preserve environmental names)
     if (kill.attackerId) {
       kill.attackerName = players.get(kill.attackerId)?.name ?? kill.attackerId;
+      kill.attackerTeam =
+        players.get(kill.attackerId)?.team ?? npcById.get(kill.attackerId)?.team ?? -1;
     }
     kill.targetName = players.get(kill.targetId)?.name ?? kill.targetId;
+    kill.targetTeam = players.get(kill.targetId)?.team ?? npcById.get(kill.targetId)?.team ?? -1;
   }
 
   // Set respawn timers and update scores for newly killed entities

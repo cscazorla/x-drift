@@ -180,9 +180,6 @@ All messages are JSON over WebSocket.
 
 ## Roadmap
 
-- Crosshair
-- In the welcome message, when the message "Choose your team" is presented, add the assigned name to the player.
-- In the log messages when a message notifies when a player killed someone, add information about the teams (killer and killed). Use the corresponding team color to highlight each name accordingly
 - Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly. Maybe use this for rolling buttons?
 - Move to 3d models (kenney assets)
 - Ship upgrades — As players score eliminations, their ship improves (speed, damage, etc.).

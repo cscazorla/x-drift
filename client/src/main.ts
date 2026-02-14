@@ -234,7 +234,15 @@ function init() {
 
     if (msg.type === MessageType.Kill) {
       triggerDeathExplosion(msg.targetId);
-      addKillEntry(msg.attackerId, msg.attackerName, msg.targetId, msg.targetName, myPlayerId);
+      addKillEntry(
+        msg.attackerId,
+        msg.attackerName,
+        msg.attackerTeam,
+        msg.targetId,
+        msg.targetName,
+        msg.targetTeam,
+        myPlayerId,
+      );
       if (msg.targetId === myPlayerId) {
         localDead = true;
         respawnCountdown = RESPAWN_TIME;
