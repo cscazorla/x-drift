@@ -23,14 +23,15 @@ export function triggerHitFlash(shipId: string): void {
   const originals = new Map<THREE.Mesh, THREE.Material>();
   ship.traverse((child) => {
     if (child instanceof THREE.Mesh) {
-      const orig = child.material as THREE.MeshStandardMaterial;
-      originals.set(child, orig);
+      const mesh = child as THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+      const orig = mesh.material as THREE.MeshStandardMaterial;
+      originals.set(mesh, orig);
       const flash = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         emissive: 0xffffff,
         emissiveIntensity: 3,
       });
-      child.material = flash;
+      mesh.material = flash;
     }
   });
 
@@ -55,14 +56,15 @@ export function triggerDeathExplosion(shipId: string): void {
   const originals = new Map<THREE.Mesh, THREE.Material>();
   ship.traverse((child) => {
     if (child instanceof THREE.Mesh) {
-      const orig = child.material as THREE.MeshStandardMaterial;
-      originals.set(child, orig);
+      const mesh = child as THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+      const orig = mesh.material as THREE.MeshStandardMaterial;
+      originals.set(mesh, orig);
       const flash = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         emissive: 0xffffff,
         emissiveIntensity: 5,
       });
-      child.material = flash;
+      mesh.material = flash;
     }
   });
 

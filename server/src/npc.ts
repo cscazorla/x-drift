@@ -19,13 +19,13 @@ import { type PlayerLike } from './game.js';
 // ---- Types ----
 
 export interface NPC extends PlayerLike {
-  skill: number;        // 0.3–1.0, affects speed and turn rate
-  targetYaw: number;    // direction the NPC is steering toward
+  skill: number; // 0.3–1.0, affects speed and turn rate
+  targetYaw: number; // direction the NPC is steering toward
   targetPitch: number;
-  wanderTimer: number;  // countdown to next direction change
+  wanderTimer: number; // countdown to next direction change
   kills: number;
   deaths: number;
-  team: number;         // 0 = green, 1 = red
+  team: number; // 0 = green, 1 = red
 }
 
 // ---- Factory functions ----
@@ -36,7 +36,7 @@ export function createNPC(id: string, team: number): NPC {
   const skill = NPC_MIN_SKILL + Math.random() * (NPC_MAX_SKILL - NPC_MIN_SKILL);
   const x = Math.cos(spawnAngle) * spawnRadius;
   const z = Math.sin(spawnAngle) * spawnRadius;
-  const outwardYaw = Math.atan2(-x, -z);  // face away from origin
+  const outwardYaw = Math.atan2(-x, -z); // face away from origin
 
   return {
     id,
@@ -56,7 +56,8 @@ export function createNPC(id: string, team: number): NPC {
     skill,
     targetYaw: outwardYaw,
     targetPitch: (Math.random() - 0.5) * 0.5,
-    wanderTimer: NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN),
+    wanderTimer:
+      NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN),
     kills: 0,
     deaths: 0,
     team,
@@ -66,7 +67,7 @@ export function createNPC(id: string, team: number): NPC {
 export function createAllNPCs(): NPC[] {
   const npcs: NPC[] = [];
   for (let i = 1; i <= NPC_COUNT; i++) {
-    npcs.push(createNPC(`npc-${i}`, i % 2));  // alternating teams
+    npcs.push(createNPC(`npc-${i}`, i % 2)); // alternating teams
   }
   return npcs;
 }
@@ -78,7 +79,7 @@ export function respawnNPC(npc: NPC): void {
   npc.x = Math.cos(spawnAngle) * spawnRadius;
   npc.y = (Math.random() - 0.5) * 40;
   npc.z = Math.sin(spawnAngle) * spawnRadius;
-  const outwardYaw = Math.atan2(-npc.x, -npc.z);  // face away from origin
+  const outwardYaw = Math.atan2(-npc.x, -npc.z); // face away from origin
   npc.hp = MAX_HP;
   npc.speed = 0;
   npc.yaw = outwardYaw;
@@ -86,7 +87,8 @@ export function respawnNPC(npc: NPC): void {
   npc.roll = 0;
   npc.targetYaw = outwardYaw;
   npc.targetPitch = (Math.random() - 0.5) * 0.5;
-  npc.wanderTimer = NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
+  npc.wanderTimer =
+    NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
 }
 
 // ---- AI logic ----
@@ -101,7 +103,14 @@ function normalizeAngle(a: number): number {
 /** Find the nearest alive enemy entity within NPC_DETECTION_RANGE, excluding self and teammates. */
 export function findNearestTarget(
   npc: NPC,
-  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number; team: number }>,
+  allEntities: readonly {
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    hp: number;
+    team: number;
+  }[],
 ): { id: string; x: number; y: number; z: number } | null {
   const rangeSq = NPC_DETECTION_RANGE * NPC_DETECTION_RANGE;
   const minRangeSq = NPC_MIN_COMBAT_RANGE * NPC_MIN_COMBAT_RANGE;
@@ -129,7 +138,14 @@ export function findNearestTarget(
 export function updateNPCAI(
   npc: NPC,
   dt: number,
-  allEntities: ReadonlyArray<{ id: string; x: number; y: number; z: number; hp: number; team: number }>,
+  allEntities: readonly {
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    hp: number;
+    team: number;
+  }[],
 ): void {
   const target = findNearestTarget(npc, allEntities);
 
@@ -149,7 +165,8 @@ export function updateNPCAI(
     const yawError = Math.abs(normalizeAngle(npc.targetYaw - npc.yaw));
     const pitchError = Math.abs(npc.targetPitch - npc.pitch);
     const aimError = Math.sqrt(yawError * yawError + pitchError * pitchError);
-    const threshold = NPC_AIM_THRESHOLD_MAX - npc.skill * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
+    const threshold =
+      NPC_AIM_THRESHOLD_MAX - npc.skill * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
     npc.fire = aimError < threshold;
   } else {
     // Wander mode
@@ -158,7 +175,9 @@ export function updateNPCAI(
       npc.targetYaw = npc.yaw + (Math.random() - 0.5) * (Math.PI / 1.5);
       npc.targetPitch = npc.pitch + (Math.random() - 0.5) * (Math.PI / 6);
       npc.targetPitch = Math.max(-0.4, Math.min(0.4, npc.targetPitch));
-      npc.wanderTimer = NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
+      npc.wanderTimer =
+        NPC_WANDER_INTERVAL_MIN +
+        Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
     }
     npc.fire = false;
   }

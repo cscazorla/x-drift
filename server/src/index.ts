@@ -12,8 +12,6 @@ import {
   type PlayerState,
   type ProjectileState,
   type StateMessage,
-  type HitMessage,
-  type KillMessage,
   type WelcomeMessage,
   type TeamInfoMessage,
 } from '@x-drift/shared';
@@ -34,20 +32,26 @@ import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
 const celestialBodies: CelestialBody[] = [
   {
     type: 'sun',
-    x: 0, y: 0, z: 0,
+    x: 0,
+    y: 0,
+    z: 0,
     radius: 30,
     color: 0xffaa00,
     emissive: 0xffdd44,
   },
   {
     type: 'planet',
-    x: -250, y: -30, z: 150,
+    x: -250,
+    y: -30,
+    z: 150,
     radius: 12,
     color: 0x4477aa,
   },
   {
     type: 'planet',
-    x: 100, y: 50, z: -350,
+    x: 100,
+    y: 50,
+    z: -350,
     radius: 18,
     color: 0xcc8844,
     ring: { innerRadius: 24, outerRadius: 34, color: 0xddaa66 },
@@ -55,14 +59,18 @@ const celestialBodies: CelestialBody[] = [
   // Small red rocky planet — barren, no atmosphere or rings
   {
     type: 'planet',
-    x: -80, y: 120, z: -500,
+    x: -80,
+    y: 120,
+    z: -500,
     radius: 6,
     color: 0xbb4422,
   },
   // Large gas giant with thick green atmosphere
   {
     type: 'planet',
-    x: 450, y: -60, z: 300,
+    x: 450,
+    y: -60,
+    z: 300,
     radius: 25,
     color: 0x2a4a2a,
     atmosphere: { color: 0x44aa55, opacity: 0.2, scale: 1.12 },
@@ -70,14 +78,18 @@ const celestialBodies: CelestialBody[] = [
   // Tiny pale moon
   {
     type: 'planet',
-    x: -400, y: 10, z: -100,
+    x: -400,
+    y: 10,
+    z: -100,
     radius: 4,
     color: 0xccccaa,
   },
   // Volcanic world — dark surface with fiery atmosphere
   {
     type: 'planet',
-    x: 200, y: -120, z: 500,
+    x: 200,
+    y: -120,
+    z: 500,
     radius: 10,
     color: 0x332211,
     atmosphere: { color: 0xff4400, opacity: 0.12, scale: 1.15 },
@@ -85,14 +97,18 @@ const celestialBodies: CelestialBody[] = [
   // Golden desert world
   {
     type: 'planet',
-    x: -350, y: 90, z: -400,
+    x: -350,
+    y: 90,
+    z: -400,
     radius: 15,
     color: 0xddaa33,
   },
   // Small purple planet with hazy atmosphere
   {
     type: 'planet',
-    x: 380, y: 140, z: -150,
+    x: 380,
+    y: 140,
+    z: -150,
     radius: 8,
     color: 0x7733aa,
     atmosphere: { color: 0xaa66dd, opacity: 0.15, scale: 1.1 },
@@ -137,16 +153,42 @@ const npcRespawnTimers = new Map<string, number>();
 // ---- Name pool ----
 
 const ICONIC_NAMES = [
-  'Maverick', 'Skywalker', 'Viper', 'Phoenix', 'Blaze', 'Nova', 'Shadow',
-  'Falcon', 'Storm', 'Rogue', 'Titan', 'Eclipse', 'Spectre', 'Cobra', 'Apex',
-  'Bolt', 'Drift', 'Fury', 'Havoc', 'Ace', 'Ghost', 'Nebula', 'Orion',
-  'Zenith', 'Cipher', 'Jinx', 'Neon', 'Pulse', 'Razor', 'Warp',
+  'Maverick',
+  'Skywalker',
+  'Viper',
+  'Phoenix',
+  'Blaze',
+  'Nova',
+  'Shadow',
+  'Falcon',
+  'Storm',
+  'Rogue',
+  'Titan',
+  'Eclipse',
+  'Spectre',
+  'Cobra',
+  'Apex',
+  'Bolt',
+  'Drift',
+  'Fury',
+  'Havoc',
+  'Ace',
+  'Ghost',
+  'Nebula',
+  'Orion',
+  'Zenith',
+  'Cipher',
+  'Jinx',
+  'Neon',
+  'Pulse',
+  'Razor',
+  'Warp',
 ];
 
 const usedNames = new Set<string>();
 
 function assignName(id: string): string {
-  const available = ICONIC_NAMES.filter(n => !usedNames.has(n));
+  const available = ICONIC_NAMES.filter((n) => !usedNames.has(n));
   if (available.length === 0) return `Pilot-${id}`;
   const name = available[Math.floor(Math.random() * available.length)];
   usedNames.add(name);
@@ -165,8 +207,14 @@ const lobbyNames = new Map<WebSocket, string>();
 function getTeamCounts(): [number, number] {
   let t0 = 0;
   let t1 = 0;
-  for (const p of players.values()) { if (p.team === 0) t0++; else t1++; }
-  for (const n of npcs) { if (n.team === 0) t0++; else t1++; }
+  for (const p of players.values()) {
+    if (p.team === 0) t0++;
+    else t1++;
+  }
+  for (const n of npcs) {
+    if (n.team === 0) t0++;
+    else t1++;
+  }
   return [t0, t1];
 }
 
@@ -203,14 +251,18 @@ wss.on('connection', (ws) => {
   lobby.add(ws);
   const name = assignName('lobby');
   lobbyNames.set(ws, name);
-  const teamInfo: TeamInfoMessage = { type: MessageType.TeamInfo, teams: getTeamCounts(), playerName: name };
+  const teamInfo: TeamInfoMessage = {
+    type: MessageType.TeamInfo,
+    teams: getTeamCounts(),
+    playerName: name,
+  };
   ws.send(JSON.stringify(teamInfo));
 
   console.log(`Client joined lobby (${lobby.size} in lobby, ${players.size} in game)`);
 
-  ws.on('message', (raw) => {
+  ws.on('message', (raw: Buffer) => {
     try {
-      const msg: ClientMessage = JSON.parse(String(raw));
+      const msg = JSON.parse(raw.toString()) as ClientMessage;
 
       // Lobby client choosing a team
       if (msg.type === MessageType.JoinTeam && lobby.has(ws)) {
@@ -246,7 +298,12 @@ wss.on('connection', (ws) => {
         };
         players.set(id, player);
 
-        const welcome: WelcomeMessage = { type: MessageType.Welcome, playerId: id, playerName: name, celestialBodies };
+        const welcome: WelcomeMessage = {
+          type: MessageType.Welcome,
+          playerId: id,
+          playerName: name,
+          celestialBodies,
+        };
         ws.send(JSON.stringify(welcome));
 
         console.log(`Player ${id} joined team ${team} (${players.size} online)`);
@@ -275,7 +332,10 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (lobby.has(ws)) {
       const lobbyName = lobbyNames.get(ws);
-      if (lobbyName) { releaseName(lobbyName); lobbyNames.delete(ws); }
+      if (lobbyName) {
+        releaseName(lobbyName);
+        lobbyNames.delete(ws);
+      }
       lobby.delete(ws);
       console.log(`Lobby client disconnected (${lobby.size} in lobby)`);
       return;
@@ -313,8 +373,8 @@ function tick() {
 
   // 2. NPC AI: skip dead NPCs
   const aliveForAI = [...players.values(), ...npcs]
-    .filter(e => e.hp > 0)
-    .map(e => ({ id: e.id, x: e.x, y: e.y, z: e.z, hp: e.hp, team: e.team }));
+    .filter((e) => e.hp > 0)
+    .map((e) => ({ id: e.id, x: e.x, y: e.y, z: e.z, hp: e.hp, team: e.team }));
   for (const npc of npcs) {
     if (npc.hp > 0) {
       updateNPCAI(npc, dt, aliveForAI);
@@ -329,7 +389,10 @@ function tick() {
   // 3. Spawn projectiles: skip dead players
   for (const player of players.values()) {
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
-    if (player.hp <= 0) { player.fire = false; continue; }
+    if (player.hp <= 0) {
+      player.fire = false;
+      continue;
+    }
     const count = projectiles.filter((p) => p.ownerId === player.id).length;
     const proj = spawnProjectile(player, count, nextProjectileId);
     if (proj) {
@@ -343,7 +406,10 @@ function tick() {
   // Spawn NPC projectiles
   for (const npc of npcs) {
     npc.fireCooldown = Math.max(0, npc.fireCooldown - dt);
-    if (npc.hp <= 0) { npc.fire = false; continue; }
+    if (npc.hp <= 0) {
+      npc.fire = false;
+      continue;
+    }
     const count = projectiles.filter((p) => p.ownerId === npc.id).length;
     const proj = spawnProjectile(npc, count, nextProjectileId);
     if (proj) {
@@ -457,9 +523,12 @@ function tick() {
       hp: p.hp,
       kills: humanPlayer?.kills ?? npc?.kills ?? 0,
       deaths: humanPlayer?.deaths ?? npc?.deaths ?? 0,
-      thrustState: (p.keys['w'] || p.keys['ArrowUp']) ? 'forward' as const
-        : (p.keys['s'] || p.keys['ArrowDown']) ? 'brake' as const
-        : 'idle' as const,
+      thrustState:
+        p.keys.w || p.keys.ArrowUp
+          ? ('forward' as const)
+          : p.keys.s || p.keys.ArrowDown
+            ? ('brake' as const)
+            : ('idle' as const),
       team: humanPlayer?.team ?? npc?.team ?? 0,
     });
   }

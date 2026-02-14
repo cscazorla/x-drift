@@ -4,15 +4,15 @@ Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship 
 
 ## Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Rendering | Three.js | 3D graphics in the browser |
-| Client bundler | Vite | Dev server with HMR, TypeScript support |
-| Server runtime | Node.js + tsx | Game server with hot reload in dev |
-| WebSocket | ws (server) / native WebSocket (client) | Real-time bidirectional communication |
-| Language | TypeScript | Shared types across client and server |
-| Testing | Vitest | Server-side unit tests |
-| Package management | npm workspaces | Monorepo with shared dependencies |
+| Layer              | Technology                              | Purpose                                 |
+| ------------------ | --------------------------------------- | --------------------------------------- |
+| Rendering          | Three.js                                | 3D graphics in the browser              |
+| Client bundler     | Vite                                    | Dev server with HMR, TypeScript support |
+| Server runtime     | Node.js + tsx                           | Game server with hot reload in dev      |
+| WebSocket          | ws (server) / native WebSocket (client) | Real-time bidirectional communication   |
+| Language           | TypeScript                              | Shared types across client and server   |
+| Testing            | Vitest                                  | Server-side unit tests                  |
+| Package management | npm workspaces                          | Monorepo with shared dependencies       |
 
 ## Repository Structure
 
@@ -145,15 +145,15 @@ npm test --workspace=server
 
 ## Controls
 
-| Input | Action |
-|-------|--------|
-| Click | Lock mouse pointer (enables look) |
-| Mouse | Steer ship |
-| W / Arrow Up | Accelerate forward (max 10 u/s) |
-| S / Arrow Down | Brake (decelerate to 0, never reverses) |
-| A / Arrow Left | Roll left |
-| D / Arrow Right | Roll right |
-| Left click (while locked) | Fire projectile (~3 shots/sec) |
+| Input                     | Action                                  |
+| ------------------------- | --------------------------------------- |
+| Click                     | Lock mouse pointer (enables look)       |
+| Mouse                     | Steer ship                              |
+| W / Arrow Up              | Accelerate forward (max 10 u/s)         |
+| S / Arrow Down            | Brake (decelerate to 0, never reverses) |
+| A / Arrow Left            | Roll left                               |
+| D / Arrow Right           | Roll right                              |
+| Left click (while locked) | Fire projectile (~3 shots/sec)          |
 
 Releasing W keeps the current speed (no friction). A debug bar at the top of the screen shows HP, position, and speed.
 
@@ -163,22 +163,23 @@ All messages are JSON over WebSocket.
 
 ### Client → Server
 
-| Message | Fields | Description |
-|---------|--------|-------------|
-| `joinTeam` | `team` | Player picks a team from the welcome screen (0 = green, 1 = red) |
-| `input` | `seq`, `keys`, `mouseDx`, `mouseDy`, `fire` | Currently pressed keys, accumulated mouse deltas, and fire intent |
+| Message    | Fields                                      | Description                                                       |
+| ---------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| `joinTeam` | `team`                                      | Player picks a team from the welcome screen (0 = green, 1 = red)  |
+| `input`    | `seq`, `keys`, `mouseDx`, `mouseDy`, `fire` | Currently pressed keys, accumulated mouse deltas, and fire intent |
 
 ### Server → Client
 
-| Message | Fields | Description |
-|---------|--------|-------------|
-| `teamInfo` | `teams: [number, number]` | Live team member counts (players + NPCs); sent to lobby clients on connect and whenever counts change |
-| `welcome` | `playerId`, `celestialBodies[]` | Sent after `joinTeam`, assigns a player ID and world geometry |
-| `state` | `players[]` (incl. `hp`, `kills`, `deaths`, `team`), `projectiles[]` | World snapshot with all player/NPC positions, scores, and team |
-| `hit` | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z` | A projectile hit a ship (triggers flash effect) |
-| `kill` | `targetId`, `attackerId`, `x`, `y`, `z` | A ship was destroyed (triggers death explosion, kill feed, respawn) |
+| Message    | Fields                                                               | Description                                                                                           |
+| ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `teamInfo` | `teams: [number, number]`                                            | Live team member counts (players + NPCs); sent to lobby clients on connect and whenever counts change |
+| `welcome`  | `playerId`, `celestialBodies[]`                                      | Sent after `joinTeam`, assigns a player ID and world geometry                                         |
+| `state`    | `players[]` (incl. `hp`, `kills`, `deaths`, `team`), `projectiles[]` | World snapshot with all player/NPC positions, scores, and team                                        |
+| `hit`      | `targetId`, `attackerId`, `projectileId`, `x`, `y`, `z`              | A projectile hit a ship (triggers flash effect)                                                       |
+| `kill`     | `targetId`, `attackerId`, `x`, `y`, `z`                              | A ship was destroyed (triggers death explosion, kill feed, respawn)                                   |
 
 ## Roadmap
+
 - Crosshair
 - In the welcome message, when the message "Choose your team" is presented, add the assigned name to the player.
 - In the log messages when a message notifies when a player killed someone, add information about the teams (killer and killed). Use the corresponding team color to highlight each name accordingly

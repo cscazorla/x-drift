@@ -3,7 +3,7 @@ import { teamColors } from './ship';
 
 // ---- DOM setup ----
 
-const TEAM_CSS_COLORS = teamColors.map(c => `#${c.primary.toString(16).padStart(6, '0')}`);
+const TEAM_CSS_COLORS = teamColors.map((c) => `#${c.primary.toString(16).padStart(6, '0')}`);
 
 const container = document.createElement('div');
 container.style.cssText =
@@ -23,10 +23,7 @@ container.appendChild(tableEl);
 
 // ---- Update function ----
 
-export function updateScoreboard(
-  players: PlayerState[],
-  myPlayerId: string | null,
-): void {
+export function updateScoreboard(players: PlayerState[], myPlayerId: string | null): void {
   // Sort by kills descending, then by deaths ascending as tiebreaker
   const sorted = [...players].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
 

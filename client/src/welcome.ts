@@ -4,9 +4,14 @@ export interface WelcomeScreenHandle {
   teamSelected: Promise<number>;
 }
 
-export function showWelcomeScreen(initialCounts: [number, number], playerName?: string): WelcomeScreenHandle {
+export function showWelcomeScreen(
+  initialCounts: [number, number],
+  playerName?: string,
+): WelcomeScreenHandle {
   let resolveTeam!: (team: number) => void;
-  const teamSelected = new Promise<number>((resolve) => { resolveTeam = resolve; });
+  const teamSelected = new Promise<number>((resolve) => {
+    resolveTeam = resolve;
+  });
 
   const overlay = document.createElement('div');
   overlay.style.cssText =

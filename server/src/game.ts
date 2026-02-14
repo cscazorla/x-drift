@@ -8,7 +8,6 @@ import {
   ROLL_SPEED,
   PROJECTILE_SPEED,
   PROJECTILE_LIFETIME,
-  FIRE_COOLDOWN,
   PROJECTILE_HIT_RADIUS,
   SHIP_COLLISION_RADIUS,
   MAX_PROJECTILES_PER_PLAYER,
@@ -72,8 +71,8 @@ export function updatePlayerMovement(player: PlayerLike, dt: number): void {
   player.mouseDy = 0;
 
   // 2. Apply roll from A/D (visual only)
-  const rollingLeft = player.keys['a'] || player.keys['ArrowLeft'];
-  const rollingRight = player.keys['d'] || player.keys['ArrowRight'];
+  const rollingLeft = player.keys.a || player.keys.ArrowLeft;
+  const rollingRight = player.keys.d || player.keys.ArrowRight;
   if (rollingLeft) player.roll += ROLL_SPEED * dt;
   else if (rollingRight) player.roll -= ROLL_SPEED * dt;
   else player.roll *= Math.pow(0.05, dt); // lerp toward 0
@@ -82,9 +81,9 @@ export function updatePlayerMovement(player: PlayerLike, dt: number): void {
   const fwd = computeForward(player.yaw, player.pitch);
 
   // 4. Update speed
-  if (player.keys['w'] || player.keys['ArrowUp']) {
+  if (player.keys.w || player.keys.ArrowUp) {
     player.speed = Math.min(player.speed + ACCELERATION * dt, MAX_SPEED);
-  } else if (player.keys['s'] || player.keys['ArrowDown']) {
+  } else if (player.keys.s || player.keys.ArrowDown) {
     player.speed = Math.max(player.speed - BRAKE_FORCE * dt, 0);
   }
 
@@ -196,9 +195,8 @@ export function applyDamage(
   entities: Map<string, PlayerLike> | PlayerLike[],
 ): KillMessage[] {
   const kills: KillMessage[] = [];
-  const lookup = entities instanceof Map
-    ? entities
-    : new Map(Array.from(entities as PlayerLike[], (e) => [e.id, e]));
+  const lookup =
+    entities instanceof Map ? entities : new Map(Array.from(entities, (e) => [e.id, e]));
 
   for (const hit of hits) {
     const target = lookup.get(hit.targetId);
@@ -225,7 +223,7 @@ export function applyDamage(
 /** Detect ship–ship collisions. Both ships die instantly. */
 export function detectShipShipCollisions(entities: PlayerLike[]): KillMessage[] {
   const kills: KillMessage[] = [];
-  const shipRadiusSq = (2 * SHIP_COLLISION_RADIUS) * (2 * SHIP_COLLISION_RADIUS);
+  const shipRadiusSq = 2 * SHIP_COLLISION_RADIUS * (2 * SHIP_COLLISION_RADIUS);
 
   for (let i = 0; i < entities.length; i++) {
     const a = entities[i];
@@ -251,7 +249,9 @@ export function detectShipShipCollisions(entities: PlayerLike[]): KillMessage[] 
           attackerId: b.id,
           attackerName: '',
           targetName: '',
-          x: mx, y: my, z: mz,
+          x: mx,
+          y: my,
+          z: mz,
         });
         kills.push({
           type: MessageType.Kill,
@@ -259,7 +259,9 @@ export function detectShipShipCollisions(entities: PlayerLike[]): KillMessage[] 
           attackerId: a.id,
           attackerName: '',
           targetName: '',
-          x: mx, y: my, z: mz,
+          x: mx,
+          y: my,
+          z: mz,
         });
       }
     }
@@ -291,7 +293,9 @@ export function detectCelestialCollisions(
           attackerId: '',
           attackerName: body.type === 'sun' ? 'the Sun' : 'a planet',
           targetName: '',
-          x: entity.x, y: entity.y, z: entity.z,
+          x: entity.x,
+          y: entity.y,
+          z: entity.z,
         });
         break; // entity is dead, no need to check other bodies
       }

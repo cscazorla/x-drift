@@ -58,4 +58,21 @@ Tests use **Vitest** and live in `server/src/__tests__/`. They cover game logic 
 - **tsx** (4.x) — Server runtime with watch mode
 - **ws** (8.x) — WebSocket server
 - **TypeScript** (5.6) strict mode throughout
-- No linter or formatter is configured
+- **ESLint** (9.x) — Linting with `typescript-eslint` type-checked rules
+- **Prettier** (3.x) — Code formatting
+
+## Linting & Formatting
+
+```bash
+# Check for lint errors
+npm run lint
+
+# Auto-fix lint errors
+npm run lint:fix
+
+# Format all files
+npm run format
+
+# Check formatting without writing
+npm run format:check
+```

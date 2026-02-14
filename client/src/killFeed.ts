@@ -8,7 +8,13 @@ document.body.appendChild(container);
 
 export { container as killFeedContainer };
 
-export function addKillEntry(attackerId: string, attackerName: string, targetId: string, targetName: string, myPlayerId: string | null): void {
+export function addKillEntry(
+  attackerId: string,
+  attackerName: string,
+  targetId: string,
+  targetName: string,
+  myPlayerId: string | null,
+): void {
   const el = document.createElement('div');
   const isLocal = attackerId === myPlayerId || targetId === myPlayerId;
   el.style.cssText =

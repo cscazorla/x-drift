@@ -6,22 +6,17 @@ const shipGlowColor = new Map<string, number>();
 const BRAKE_COLOR = 0xff2200;
 
 export const teamColors = [
-  { primary: 0x00ff88, accent: 0x006633, glow: 0x00ffcc },  // green
-  { primary: 0xff4444, accent: 0x661111, glow: 0xff6666 },  // red
+  { primary: 0x00ff88, accent: 0x006633, glow: 0x00ffcc }, // green
+  { primary: 0xff4444, accent: 0x661111, glow: 0xff6666 }, // red
 ];
 
 // Brighter variants for the local player
 const localTeamColors = [
-  { primary: 0x66ffbb, accent: 0x009955, glow: 0x88ffdd },  // bright green
-  { primary: 0xff8888, accent: 0xaa3333, glow: 0xffaaaa },  // bright red
+  { primary: 0x66ffbb, accent: 0x009955, glow: 0x88ffdd }, // bright green
+  { primary: 0xff8888, accent: 0xaa3333, glow: 0xffaaaa }, // bright red
 ];
 
-function createShip(
-  scene: THREE.Scene,
-  id: string,
-  team: number,
-  isLocal: boolean,
-): THREE.Group {
+function createShip(scene: THREE.Scene, id: string, team: number, isLocal: boolean): THREE.Group {
   const palette = isLocal ? localTeamColors : teamColors;
   const c = palette[team] ?? palette[0];
   const primary = c.primary;
@@ -115,8 +110,9 @@ export function removeShip(scene: THREE.Scene, id: string): void {
   scene.remove(group);
   group.traverse((child) => {
     if (child instanceof THREE.Mesh) {
-      child.geometry.dispose();
-      (child.material as THREE.Material).dispose();
+      const mesh = child as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+      mesh.geometry.dispose();
+      mesh.material.dispose();
     }
   });
   shipCache.delete(id);

@@ -18,7 +18,9 @@ function makeHit(overrides: Partial<Omit<HitMessage, 'type'>> = {}): HitMessage 
     targetId: 'p1',
     attackerId: 'p2',
     projectileId: 1,
-    x: 0, y: 0, z: 0,
+    x: 0,
+    y: 0,
+    z: 0,
     ...overrides,
   };
 }
@@ -27,12 +29,17 @@ function makeHit(overrides: Partial<Omit<HitMessage, 'type'>> = {}): HitMessage 
 function makePlayer(overrides: Partial<PlayerLike> = {}): PlayerLike {
   return {
     id: 'p1',
-    x: 0, y: 0, z: 0,
-    yaw: 0, pitch: 0, roll: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 0,
     speed: 0,
     hp: MAX_HP,
     keys: {},
-    mouseDx: 0, mouseDy: 0,
+    mouseDx: 0,
+    mouseDy: 0,
     fire: false,
     fireCooldown: 0,
     ...overrides,
@@ -43,8 +50,12 @@ function makeProjectile(overrides: Partial<Projectile> = {}): Projectile {
   return {
     id: 1,
     ownerId: 'p1',
-    x: 0, y: 0, z: 0,
-    dx: 0, dy: 0, dz: -1,
+    x: 0,
+    y: 0,
+    z: 0,
+    dx: 0,
+    dy: 0,
+    dz: -1,
     age: 0,
     ...overrides,
   };

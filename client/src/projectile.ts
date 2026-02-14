@@ -8,16 +8,19 @@ const BEAM_LENGTH = 1.5;
 const BEAM_RADIUS = 0.035;
 
 // Cylinder along Y by default — we'll rotate to match direction
-const sharedGeometry = new THREE.CylinderGeometry(
-  BEAM_RADIUS, BEAM_RADIUS, BEAM_LENGTH, 6, 1,
-);
+const sharedGeometry = new THREE.CylinderGeometry(BEAM_RADIUS, BEAM_RADIUS, BEAM_LENGTH, 6, 1);
 // Shift so the cylinder's origin is at its tail (beam extends forward)
 sharedGeometry.translate(0, BEAM_LENGTH / 2, 0);
 
-const teamMaterials = teamColors.map(c =>
-  new THREE.MeshStandardMaterial({
-    color: c.glow, emissive: c.glow, emissiveIntensity: 1.5, transparent: true, opacity: 0.9,
-  }),
+const teamMaterials = teamColors.map(
+  (c) =>
+    new THREE.MeshStandardMaterial({
+      color: c.glow,
+      emissive: c.glow,
+      emissiveIntensity: 1.5,
+      transparent: true,
+      opacity: 0.9,
+    }),
 );
 
 const _up = new THREE.Vector3(0, 1, 0);

@@ -65,11 +65,7 @@ export function createCelestialBodies(
 
       // Optional ring
       if (body.ring) {
-        const ringGeo = new THREE.RingGeometry(
-          body.ring.innerRadius,
-          body.ring.outerRadius,
-          64,
-        );
+        const ringGeo = new THREE.RingGeometry(body.ring.innerRadius, body.ring.outerRadius, 64);
         const ringMat = new THREE.MeshBasicMaterial({
           color: body.ring.color,
           side: THREE.DoubleSide,

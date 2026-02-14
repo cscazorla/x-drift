@@ -27,12 +27,7 @@ import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000011);
 
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 10, 10);
 camera.lookAt(0, 0, 0);
 
@@ -51,8 +46,8 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  1.5,  // strength
-  0.8,  // radius
+  1.5, // strength
+  0.8, // radius
   0.75, // threshold
 );
 composer.addPass(bloomPass);
@@ -121,7 +116,7 @@ animate();
 
 // ---- Game init ----
 
-async function init() {
+function init() {
   // Connect WebSocket first (before showing welcome screen)
   const ws = new WebSocket(`ws://localhost:${SERVER_PORT}`);
 
@@ -129,14 +124,14 @@ async function init() {
   let welcomeHandle: WelcomeScreenHandle | null = null;
 
   ws.addEventListener('message', (event) => {
-    const msg: ServerMessage = JSON.parse(String(event.data));
+    const msg = JSON.parse(String(event.data)) as ServerMessage;
 
     if (msg.type === MessageType.TeamInfo) {
       if (!welcomeHandle) {
         // First TeamInfo — show welcome screen
         welcomeHandle = showWelcomeScreen(msg.teams, msg.playerName);
         // When the player picks a team, send JoinTeam
-        welcomeHandle.teamSelected.then((team) => {
+        void welcomeHandle.teamSelected.then((team) => {
           const joinMsg: JoinTeamMessage = { type: MessageType.JoinTeam, team };
           ws.send(JSON.stringify(joinMsg));
         });
@@ -214,20 +209,15 @@ async function init() {
             );
 
             // Look at a point ahead of the ship
-            camera.lookAt(
-              me.x + forwardX * 4,
-              me.y + forwardY * 4,
-              me.z + forwardZ * 4,
-            );
+            camera.lookAt(me.x + forwardX * 4, me.y + forwardY * 4, me.z + forwardZ * 4);
           }
 
           // Keep starfield centred on camera
           stars.position.copy(camera.position);
 
           // Update debug bar
-          const humanCount = msg.players.filter(p => !p.id.startsWith('npc-')).length;
-          debugBar.textContent =
-            `players ${humanCount}  hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
+          const humanCount = msg.players.filter((p) => !p.id.startsWith('npc-')).length;
+          debugBar.textContent = `players ${humanCount}  hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}`;
         }
 
         // Update scoreboard
@@ -283,7 +273,7 @@ async function init() {
   const canvas = renderer.domElement;
 
   canvas.addEventListener('click', () => {
-    canvas.requestPointerLock();
+    void canvas.requestPointerLock();
   });
 
   document.addEventListener('mousemove', (e) => {

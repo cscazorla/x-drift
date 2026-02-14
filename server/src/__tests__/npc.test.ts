@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createNPC, createAllNPCs, updateNPCAI, findNearestTarget, respawnNPC, type NPC } from '../npc.js';
+import {
+  createNPC,
+  createAllNPCs,
+  updateNPCAI,
+  findNearestTarget,
+  respawnNPC,
+  type NPC,
+} from '../npc.js';
 import { updatePlayerMovement } from '../game.js';
 import {
   MAX_HP,
@@ -10,7 +17,6 @@ import {
   NPC_WANDER_INTERVAL_MAX,
   MAX_SPEED,
   MAX_PITCH,
-  MOUSE_SENSITIVITY,
   NPC_TURN_RATE,
   NPC_DETECTION_RANGE,
   NPC_MIN_COMBAT_RANGE,
@@ -23,12 +29,17 @@ import {
 function makeNPC(overrides: Partial<NPC> = {}): NPC {
   return {
     id: 'npc-test',
-    x: 0, y: 0, z: 0,
-    yaw: 0, pitch: 0, roll: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 0,
     speed: 0,
     hp: MAX_HP,
     keys: {},
-    mouseDx: 0, mouseDy: 0,
+    mouseDx: 0,
+    mouseDy: 0,
     fire: false,
     fireCooldown: 0,
     skill: 0.5,
@@ -102,15 +113,15 @@ describe('updateNPCAI', () => {
   it('sets keys.w when speed < target speed', () => {
     const npc = makeNPC({ speed: 0, skill: 0.5 });
     updateNPCAI(npc, dt, []);
-    expect(npc.keys['w']).toBe(true);
-    expect(npc.keys['s']).toBeUndefined();
+    expect(npc.keys.w).toBe(true);
+    expect(npc.keys.s).toBeUndefined();
   });
 
   it('sets keys.s when speed > target speed', () => {
     const npc = makeNPC({ speed: MAX_SPEED, skill: 0.3 });
     updateNPCAI(npc, dt, []);
-    expect(npc.keys['s']).toBe(true);
-    expect(npc.keys['w']).toBeUndefined();
+    expect(npc.keys.s).toBe(true);
+    expect(npc.keys.w).toBeUndefined();
   });
 
   it('neither key when at target speed', () => {
@@ -118,8 +129,8 @@ describe('updateNPCAI', () => {
     const targetSpeed = skill * MAX_SPEED * NPC_MAX_SPEED_FACTOR;
     const npc = makeNPC({ speed: targetSpeed, skill });
     updateNPCAI(npc, dt, []);
-    expect(npc.keys['w']).toBeUndefined();
-    expect(npc.keys['s']).toBeUndefined();
+    expect(npc.keys.w).toBeUndefined();
+    expect(npc.keys.s).toBeUndefined();
   });
 
   it('fire is false when no targets nearby', () => {
@@ -230,8 +241,10 @@ describe('updateNPCAI combat', () => {
   });
 
   it('low-skill NPC fires at wider angle than high-skill', () => {
-    const thresholdLow = NPC_AIM_THRESHOLD_MAX - 0.3 * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
-    const thresholdHigh = NPC_AIM_THRESHOLD_MAX - 1.0 * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
+    const thresholdLow =
+      NPC_AIM_THRESHOLD_MAX - 0.3 * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
+    const thresholdHigh =
+      NPC_AIM_THRESHOLD_MAX - 1.0 * (NPC_AIM_THRESHOLD_MAX - NPC_AIM_THRESHOLD_MIN);
     expect(thresholdLow).toBeGreaterThan(thresholdHigh);
   });
 
@@ -292,9 +305,7 @@ describe('NPC + updatePlayerMovement integration', () => {
       updateNPCAI(npc, dt, []);
       updatePlayerMovement(npc, dt);
     }
-    const dist = Math.sqrt(
-      (npc.x - startX) ** 2 + (npc.y - startY) ** 2 + (npc.z - startZ) ** 2,
-    );
+    const dist = Math.sqrt((npc.x - startX) ** 2 + (npc.y - startY) ** 2 + (npc.z - startZ) ** 2);
     expect(dist).toBeGreaterThan(0);
   });
 

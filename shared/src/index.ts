@@ -101,7 +101,7 @@ export interface PlayerState {
   kills: number;
   deaths: number;
   thrustState: 'idle' | 'forward' | 'brake';
-  team: number;  // 0 = green, 1 = red
+  team: number; // 0 = green, 1 = red
 }
 
 export interface StateMessage {
@@ -131,7 +131,12 @@ export interface KillMessage {
   z: number;
 }
 
-export type ServerMessage = WelcomeMessage | TeamInfoMessage | StateMessage | HitMessage | KillMessage;
+export type ServerMessage =
+  | WelcomeMessage
+  | TeamInfoMessage
+  | StateMessage
+  | HitMessage
+  | KillMessage;
 export type ClientMessage = InputMessage | JoinTeamMessage;
 
 // ---- Constants ----
@@ -162,14 +167,14 @@ export const SCOREBOARD_SIZE = 10;
 
 // NPC constants
 export const NPC_COUNT = 75;
-export const NPC_TURN_RATE = 400;           // max mouse-delta units for steering
-export const NPC_WANDER_INTERVAL_MIN = 2;   // seconds
-export const NPC_WANDER_INTERVAL_MAX = 5;   // seconds
+export const NPC_TURN_RATE = 400; // max mouse-delta units for steering
+export const NPC_WANDER_INTERVAL_MIN = 2; // seconds
+export const NPC_WANDER_INTERVAL_MAX = 5; // seconds
 export const NPC_MIN_SKILL = 0.3;
 export const NPC_MAX_SKILL = 1.0;
 export const NPC_DETECTION_RANGE = 50;
-export const NPC_MIN_COMBAT_RANGE = 5;      // ignore targets closer than this to avoid deadlocks
-export const NPC_MAX_SPEED_FACTOR = 0.7;    // NPCs cap at 70% of MAX_SPEED
-export const NPC_AIM_THRESHOLD_MIN = 0.15;  // ~9 deg — skill=1.0 still needs decent aim
-export const NPC_AIM_THRESHOLD_MAX = 0.5;   // ~29 deg — skill=0.3 fires very loosely
-export const NPC_FIRE_COOLDOWN = 0.8;       // seconds — NPCs shoot slower than players (0.3)
+export const NPC_MIN_COMBAT_RANGE = 5; // ignore targets closer than this to avoid deadlocks
+export const NPC_MAX_SPEED_FACTOR = 0.7; // NPCs cap at 70% of MAX_SPEED
+export const NPC_AIM_THRESHOLD_MIN = 0.15; // ~9 deg — skill=1.0 still needs decent aim
+export const NPC_AIM_THRESHOLD_MAX = 0.5; // ~29 deg — skill=0.3 fires very loosely
+export const NPC_FIRE_COOLDOWN = 0.8; // seconds — NPCs shoot slower than players (0.3)
