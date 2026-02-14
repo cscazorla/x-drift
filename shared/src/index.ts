@@ -1,3 +1,5 @@
+export { computeForward, normalizeAngle, distanceSq } from './math.js';
+
 // ---- Protocol message types ----
 
 export const enum MessageType {

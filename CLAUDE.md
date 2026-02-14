@@ -31,14 +31,15 @@ Both server and client must be running simultaneously for development. Open mult
 
 **Monorepo** with three npm workspaces:
 
-- **`shared/`** — TypeScript types and constants (`@x-drift/shared`). All message types (`MessageType` enum), game constants, and interfaces (e.g. `PlayerState`, `ProjectileState`, `CelestialBody`) live here. Both client and server import from this package directly (no build step — `main` points to `.ts` source).
+- **`shared/`** — TypeScript types and constants (`@x-drift/shared`). All message types (`MessageType` enum), game constants, and interfaces (e.g. `PlayerState`, `ProjectileState`, `CelestialBody`) live here. `math.ts` provides shared pure math utilities (`computeForward`, `normalizeAngle`, `distanceSq`) used by both client and server. Both client and server import from this package directly (no build step — `main` points to `.ts` source).
 
-- **`server/`** — Node.js WebSocket server (`ws` library). Three key files:
+- **`server/`** — Node.js WebSocket server (`ws` library). Key files:
   - `index.ts` — WebSocket server, game loop (60 Hz tick), player connection lifecycle, lobby system, state broadcasting. Orchestrates the tick: apply inputs → update NPC AI → update positions → spawn projectiles → move projectiles → detect collisions → apply damage → handle respawns.
-  - `game.ts` — Pure functions for game logic: `computeForward()`, `updatePlayerMovement()`, `spawnProjectile()`, `moveProjectiles()`, `detectCollisions()`, `applyDamage()`. No I/O, fully testable.
+  - `game.ts` — Pure functions for game logic: `updatePlayerMovement()`, `spawnProjectile()`, `moveProjectiles()`, `detectCollisions()`, `applyDamage()`. No I/O, fully testable.
   - `npc.ts` — NPC AI: `createNPC()`, `updateNPCAI()`, `findNearestTarget()`, `respawnNPC()`. NPCs simulate player inputs (keys/mouse) which feed into the same movement system.
+  - `spawn.ts` — `randomSpawnPosition()` for placing ships (players and NPCs) at random positions facing away from the origin.
 
-- **`client/`** — Vite + Three.js browser app. `main.ts` is the entry point handling WebSocket connection, input capture (keyboard + pointer lock mouse), and the render loop. Rendering is split into focused modules: `ship.ts` (mesh factory), `starfield.ts`, `celestial.ts` (sun/planets), `projectile.ts`, `hitEffect.ts`, `welcome.ts` (team selection UI), `killFeed.ts`, `scoreboard.ts`.
+- **`client/`** — Vite + Three.js browser app. `main.ts` is the entry point handling WebSocket connection and the render loop. Supporting modules: `threeSetup.ts` (scene, camera, renderer, bloom post-processing), `inputManager.ts` (keyboard, mouse, pointer lock), `ship.ts` (mesh factory), `starfield.ts`, `celestial.ts` (sun/planets), `projectile.ts`, `hitEffect.ts`, `welcome.ts` (team selection UI), `killFeed.ts`, `scoreboard.ts`, `crosshair.ts`, `heatBar.ts`.
 
 ### Key Design Patterns
 
@@ -49,7 +50,7 @@ Both server and client must be running simultaneously for development. Open mult
 
 ## Testing
 
-Tests use **Vitest** and live in `server/src/__tests__/`. They cover game logic (`game.test.ts`) and NPC behavior (`npc.test.ts`). Test files import the pure functions from `game.ts` and `npc.ts` directly. There is no client-side testing.
+Tests use **Vitest** and live in `server/src/__tests__/`. They cover shared math utilities (`math.test.ts`), game logic (`game.test.ts`), and NPC behavior (`npc.test.ts`). Test files import the pure functions from `@x-drift/shared`, `game.ts`, and `npc.ts` directly. There is no client-side testing.
 
 ## Tech Stack
 

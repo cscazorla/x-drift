@@ -25,7 +25,9 @@ x-drift/
 ├── client/                # Browser client (Vite + Three.js)
 │   ├── index.html
 │   ├── src/
-│   │   ├── main.ts        # Three.js renderer + WebSocket client
+│   │   ├── main.ts        # WebSocket client, render loop, game state
+│   │   ├── threeSetup.ts  # Three.js scene, camera, renderer, bloom post-processing
+│   │   ├── inputManager.ts # Keyboard, mouse, and pointer lock input handling
 │   │   ├── ship.ts        # Ship model factory (7-mesh X-wing shape)
 │   │   ├── starfield.ts   # Particle-based starfield that follows the camera
 │   │   ├── celestial.ts   # Sun and planet renderer from server data
@@ -33,8 +35,9 @@ x-drift/
 │   │   ├── hitEffect.ts   # Hit flash + death explosion effects
 │   │   ├── welcome.ts     # Welcome screen with team selection and live counts
 │   │   ├── killFeed.ts    # DOM-based kill feed overlay (top-right)
-│   │   └── scoreboard.ts  # Top-10 scoreboard overlay (top-left)
-
+│   │   ├── scoreboard.ts  # Top-10 scoreboard overlay (top-left)
+│   │   ├── crosshair.ts   # Centered crosshair reticle with heat feedback
+│   │   └── heatBar.ts     # Weapon heat bar overlay
 │   ├── package.json
 │   └── tsconfig.json
 ├── server/                # Authoritative game server (Node.js + ws)
@@ -42,15 +45,18 @@ x-drift/
 │   │   ├── index.ts       # WebSocket server + game loop
 │   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions, damage)
 │   │   ├── npc.ts         # NPC ship AI (wander + combat behavior, input simulation)
+│   │   ├── spawn.ts       # Random spawn position generator
 │   │   └── __tests__/
 │   │       ├── game.test.ts
+│   │       ├── math.test.ts
 │   │       └── npc.test.ts
 │   ├── vitest.config.ts
 │   ├── package.json
 │   └── tsconfig.json
 └── shared/                # Types and constants shared by client and server
     ├── src/
-    │   └── index.ts       # Message types, game constants
+    │   ├── index.ts       # Message types, game constants, re-exports
+    │   └── math.ts        # Shared math utilities (computeForward, normalizeAngle, distanceSq)
     ├── package.json
     └── tsconfig.json
 ```
@@ -183,7 +189,6 @@ All messages are JSON over WebSocket.
 ## Roadmap
 
 - Improve and consolidate player's HUD (Keep current scoreboard aside): health points, fire overheats, coordinates position, speed. It should look like a spaceship HUD. What about using progress bars, icons, etc.
-- Extract math operation (e.g. normalizeAngle) in codebase to a exportable file
 - Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly. Maybe use this for rolling buttons?
 - Move to 3d models (kenney assets)
 - Ship upgrades — As players score eliminations, their ship improves (speed, damage, etc.).

@@ -27,6 +27,7 @@ import {
   updateHeat,
 } from './game.js';
 import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
+import { randomSpawnPosition } from './spawn.js';
 
 // ---- Celestial bodies ----
 
@@ -227,22 +228,6 @@ function broadcastTeamInfo(): void {
   for (const ws of lobby) {
     if (ws.readyState === WebSocket.OPEN) ws.send(payload);
   }
-}
-
-// ---- Helpers ----
-
-function randomSpawnPosition(): { x: number; y: number; z: number; yaw: number; pitch: number } {
-  const spawnAngle = Math.random() * 2 * Math.PI;
-  const spawnRadius = 80 + Math.random() * 50;
-  const sx = Math.cos(spawnAngle) * spawnRadius;
-  const sy = (Math.random() - 0.5) * 40;
-  const sz = Math.sin(spawnAngle) * spawnRadius;
-  const sun = celestialBodies.find((b) => b.type === 'sun');
-  const dx = (sun?.x ?? 0) - sx;
-  const dy = (sun?.y ?? 0) - sy;
-  const dz = (sun?.z ?? 0) - sz;
-  const dist = Math.sqrt(dx * dx + dz * dz);
-  return { x: sx, y: sy, z: sz, yaw: Math.atan2(dx, dz), pitch: Math.atan2(-dy, dist) };
 }
 
 // ---- WebSocket server ----

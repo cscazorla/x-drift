@@ -15,6 +15,8 @@ import {
   HEAT_DECAY_RATE,
   OVERHEAT_THRESHOLD,
   OVERHEAT_RECOVERY,
+  computeForward,
+  distanceSq,
   type CelestialBody,
   type HitMessage,
   type KillMessage,
@@ -55,15 +57,6 @@ export interface PlayerLike {
 }
 
 // ---- Pure functions ----
-
-/** Compute a unit forward vector from yaw and pitch. */
-export function computeForward(yaw: number, pitch: number): { x: number; y: number; z: number } {
-  return {
-    x: -Math.sin(yaw) * Math.cos(pitch),
-    y: Math.sin(pitch),
-    z: -Math.cos(yaw) * Math.cos(pitch),
-  };
-}
 
 /** Apply mouse rotation, roll, speed and position updates to a player. Mutates in place. */
 export function updatePlayerMovement(player: PlayerLike, dt: number): void {
@@ -172,11 +165,8 @@ export function detectCollisions(
       // Skip same-team targets (friendly fire prevention)
       const ownerTeam = teamByOwner?.get(p.ownerId);
       if (ownerTeam !== undefined && target.team === ownerTeam) continue;
-      const dx = p.x - target.x;
-      const dy = p.y - target.y;
-      const dz = p.z - target.z;
-      const distSq = dx * dx + dy * dy + dz * dz;
-      if (distSq <= hitRadiusSq) {
+      const dSq = distanceSq(p, target);
+      if (dSq <= hitRadiusSq) {
         hits.push({
           type: MessageType.Hit,
           targetId: target.id,
@@ -244,11 +234,8 @@ export function detectShipShipCollisions(entities: PlayerLike[]): KillMessage[] 
     for (let j = i + 1; j < entities.length; j++) {
       const b = entities[j];
       if (b.hp <= 0) continue;
-      const dx = a.x - b.x;
-      const dy = a.y - b.y;
-      const dz = a.z - b.z;
-      const distSq = dx * dx + dy * dy + dz * dz;
-      if (distSq <= shipRadiusSq) {
+      const dSq = distanceSq(a, b);
+      if (dSq <= shipRadiusSq) {
         a.hp = 0;
         a.speed = 0;
         b.hp = 0;
@@ -297,11 +284,8 @@ export function detectCelestialCollisions(
     if (entity.hp <= 0) continue;
     for (const body of bodies) {
       const threshold = body.radius + SHIP_COLLISION_RADIUS;
-      const dx = entity.x - body.x;
-      const dy = entity.y - body.y;
-      const dz = entity.z - body.z;
-      const distSq = dx * dx + dy * dy + dz * dz;
-      if (distSq <= threshold * threshold) {
+      const dSq = distanceSq(entity, body);
+      if (dSq <= threshold * threshold) {
         entity.hp = 0;
         entity.speed = 0;
         kills.push({

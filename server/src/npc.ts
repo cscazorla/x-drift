@@ -13,8 +13,11 @@ import {
   NPC_AIM_THRESHOLD_MIN,
   NPC_AIM_THRESHOLD_MAX,
   NPC_MAX_SPEED_FACTOR,
+  normalizeAngle,
+  distanceSq,
 } from '@x-drift/shared';
 import { type PlayerLike } from './game.js';
+import { randomSpawnPosition } from './spawn.js';
 
 // ---- Types ----
 
@@ -31,19 +34,15 @@ export interface NPC extends PlayerLike {
 // ---- Factory functions ----
 
 export function createNPC(id: string, team: number): NPC {
-  const spawnAngle = Math.random() * 2 * Math.PI;
-  const spawnRadius = 80 + Math.random() * 50;
+  const spawn = randomSpawnPosition();
   const skill = NPC_MIN_SKILL + Math.random() * (NPC_MAX_SKILL - NPC_MIN_SKILL);
-  const x = Math.cos(spawnAngle) * spawnRadius;
-  const z = Math.sin(spawnAngle) * spawnRadius;
-  const outwardYaw = Math.atan2(-x, -z); // face away from origin
 
   return {
     id,
-    x,
-    y: (Math.random() - 0.5) * 40,
-    z,
-    yaw: outwardYaw,
+    x: spawn.x,
+    y: spawn.y,
+    z: spawn.z,
+    yaw: spawn.yaw,
     pitch: 0,
     roll: 0,
     speed: 0,
@@ -56,7 +55,7 @@ export function createNPC(id: string, team: number): NPC {
     heat: 0,
     overheated: false,
     skill,
-    targetYaw: outwardYaw,
+    targetYaw: spawn.yaw,
     targetPitch: (Math.random() - 0.5) * 0.5,
     wanderTimer:
       NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN),
@@ -76,18 +75,16 @@ export function createAllNPCs(): NPC[] {
 
 /** Reset an NPC to a fresh spawn state (new position, full hp). Keeps id and skill. */
 export function respawnNPC(npc: NPC): void {
-  const spawnAngle = Math.random() * 2 * Math.PI;
-  const spawnRadius = 80 + Math.random() * 50;
-  npc.x = Math.cos(spawnAngle) * spawnRadius;
-  npc.y = (Math.random() - 0.5) * 40;
-  npc.z = Math.sin(spawnAngle) * spawnRadius;
-  const outwardYaw = Math.atan2(-npc.x, -npc.z); // face away from origin
+  const spawn = randomSpawnPosition();
+  npc.x = spawn.x;
+  npc.y = spawn.y;
+  npc.z = spawn.z;
   npc.hp = MAX_HP;
   npc.speed = 0;
-  npc.yaw = outwardYaw;
+  npc.yaw = spawn.yaw;
   npc.pitch = 0;
   npc.roll = 0;
-  npc.targetYaw = outwardYaw;
+  npc.targetYaw = spawn.yaw;
   npc.targetPitch = (Math.random() - 0.5) * 0.5;
   npc.heat = 0;
   npc.overheated = false;
@@ -96,13 +93,6 @@ export function respawnNPC(npc: NPC): void {
 }
 
 // ---- AI logic ----
-
-/** Normalize angle to [-π, π] */
-function normalizeAngle(a: number): number {
-  while (a > Math.PI) a -= 2 * Math.PI;
-  while (a < -Math.PI) a += 2 * Math.PI;
-  return a;
-}
 
 /** Find the nearest alive enemy entity within NPC_DETECTION_RANGE, excluding self and teammates. */
 export function findNearestTarget(
@@ -123,12 +113,9 @@ export function findNearestTarget(
 
   for (const e of allEntities) {
     if (e.id === npc.id || e.hp <= 0 || e.team === npc.team) continue;
-    const dx = e.x - npc.x;
-    const dy = e.y - npc.y;
-    const dz = e.z - npc.z;
-    const distSq = dx * dx + dy * dy + dz * dz;
-    if (distSq < bestDistSq && distSq >= minRangeSq && distSq <= rangeSq) {
-      bestDistSq = distSq;
+    const dSq = distanceSq(e, npc);
+    if (dSq < bestDistSq && dSq >= minRangeSq && dSq <= rangeSq) {
+      bestDistSq = dSq;
       best = { id: e.id, x: e.x, y: e.y, z: e.z };
     }
   }

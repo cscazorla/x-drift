@@ -1,13 +1,10 @@
-import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Clock } from 'three';
 import {
   MessageType,
   SERVER_PORT,
   TICK_RATE,
   RESPAWN_TIME,
+  computeForward,
   type ServerMessage,
   type InputMessage,
   type JoinTeamMessage,
@@ -23,48 +20,15 @@ import { updateScoreboard, scoreboardContainer } from './scoreboard';
 import { crosshairContainer, updateCrosshairHeat } from './crosshair';
 import { heatBarContainer, updateHeatBar } from './heatBar';
 import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
+import { createInputManager } from './inputManager';
+import { initThreeScene } from './threeSetup';
 
 // ---- Three.js setup ----
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000011);
-
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 10, 10);
-camera.lookAt(0, 0, 0);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// Basic lighting
-scene.add(new THREE.AmbientLight(0x445566, 0.8));
-const sunLight = new THREE.PointLight(0xfff5e6, 3, 0, 0);
-sunLight.position.set(0, 0, 0);
-scene.add(sunLight);
-
-// Bloom post-processing
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloomPass = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight),
-  1.5, // strength
-  0.8, // radius
-  0.75, // threshold
-);
-composer.addPass(bloomPass);
-composer.addPass(new OutputPass());
+const { scene, camera, renderer, composer, sunLight } = initThreeScene();
 
 // Starfield (follows camera so stars appear infinitely far)
 const stars = createStarfield(scene);
-
-// Handle window resize
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-});
 
 // ---- Debug bar ----
 
@@ -98,7 +62,7 @@ let respawnCountdown = 0;
 
 // ---- Render loop (runs during welcome screen for starfield background) ----
 
-const clock = new THREE.Clock();
+const clock = new Clock();
 
 function animate() {
   requestAnimationFrame(animate);
@@ -202,20 +166,17 @@ function init() {
 
           // Only update camera if alive (freeze when dead)
           if (me.hp > 0) {
-            // Forward vector (same formula as server)
-            const forwardX = -Math.sin(me.yaw) * Math.cos(me.pitch);
-            const forwardY = Math.sin(me.pitch);
-            const forwardZ = -Math.cos(me.yaw) * Math.cos(me.pitch);
+            const fwd = computeForward(me.yaw, me.pitch);
 
             // Camera behind the ship
             camera.position.set(
-              me.x - forwardX * CAM_DIST,
-              me.y - forwardY * CAM_DIST + CAM_HEIGHT,
-              me.z - forwardZ * CAM_DIST,
+              me.x - fwd.x * CAM_DIST,
+              me.y - fwd.y * CAM_DIST + CAM_HEIGHT,
+              me.z - fwd.z * CAM_DIST,
             );
 
             // Look at a point ahead of the ship
-            camera.lookAt(me.x + forwardX * 4, me.y + forwardY * 4, me.z + forwardZ * 4);
+            camera.lookAt(me.x + fwd.x * 4, me.y + fwd.y * 4, me.z + fwd.z * 4);
 
             // Update heat visuals
             updateCrosshairHeat(me.heat, me.overheated);
@@ -271,55 +232,8 @@ function init() {
 
   // ---- Input tracking ----
 
-  const keys: Record<string, boolean> = {};
+  const input = createInputManager(renderer.domElement);
   let inputSeq = 0;
-
-  // Mouse delta accumulators (reset after each input send)
-  let accumulatedDx = 0;
-  let accumulatedDy = 0;
-
-  // Continuous fire: held while mouse button is pressed
-  let mouseHeld = false;
-
-  window.addEventListener('keydown', (e) => {
-    keys[e.key] = true;
-  });
-  window.addEventListener('keyup', (e) => {
-    keys[e.key] = false;
-  });
-
-  // ---- Pointer Lock ----
-
-  const canvas = renderer.domElement;
-
-  canvas.addEventListener('click', () => {
-    void canvas.requestPointerLock();
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (document.pointerLockElement === canvas) {
-      accumulatedDx += e.movementX;
-      accumulatedDy -= e.movementY;
-    }
-  });
-
-  document.addEventListener('mousedown', (e) => {
-    if (e.button === 0 && document.pointerLockElement === canvas) {
-      mouseHeld = true;
-    }
-  });
-
-  document.addEventListener('mouseup', (e) => {
-    if (e.button === 0) {
-      mouseHeld = false;
-    }
-  });
-
-  document.addEventListener('pointerlockchange', () => {
-    if (document.pointerLockElement !== canvas) {
-      mouseHeld = false;
-    }
-  });
 
   // ---- Chase camera constants ----
 
@@ -330,21 +244,17 @@ function init() {
 
   setInterval(() => {
     if (ws.readyState === WebSocket.OPEN && myPlayerId) {
-      // Suppress input when dead
+      const snapshot = input.getStateAndReset();
       const dead = localDead;
       const msg: InputMessage = {
         type: MessageType.Input,
         seq: inputSeq++,
-        keys: dead ? {} : { ...keys },
-        mouseDx: dead ? 0 : accumulatedDx,
-        mouseDy: dead ? 0 : accumulatedDy,
-        fire: dead ? false : mouseHeld,
+        keys: dead ? {} : snapshot.keys,
+        mouseDx: dead ? 0 : snapshot.mouseDx,
+        mouseDy: dead ? 0 : snapshot.mouseDy,
+        fire: dead ? false : snapshot.fire,
       };
       ws.send(JSON.stringify(msg));
-
-      // Reset accumulators after sending
-      accumulatedDx = 0;
-      accumulatedDy = 0;
     }
   }, 1000 / TICK_RATE);
 }
