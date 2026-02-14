@@ -20,6 +20,7 @@ import { updateProjectiles } from './projectile';
 import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
 import { addKillEntry, killFeedContainer } from './killFeed';
 import { updateScoreboard, scoreboardContainer } from './scoreboard';
+import { crosshairContainer } from './crosshair';
 import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
 
 // ---- Three.js setup ----
@@ -154,6 +155,7 @@ function init() {
       debugBar.style.display = '';
       scoreboardContainer.style.display = '';
       killFeedContainer.style.display = 'flex';
+      crosshairContainer.style.display = '';
       return;
     }
 
@@ -192,6 +194,7 @@ function init() {
             localDead = false;
             respawnCountdown = 0;
             deathOverlay.style.display = 'none';
+            crosshairContainer.style.display = '';
           }
 
           // Only update camera if alive (freeze when dead)
@@ -236,6 +239,7 @@ function init() {
         localDead = true;
         respawnCountdown = RESPAWN_TIME;
         deathOverlay.style.display = 'flex';
+        crosshairContainer.style.display = 'none';
         deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
       }
     }
