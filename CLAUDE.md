@@ -39,7 +39,7 @@ Both server and client must be running simultaneously for development. Open mult
   - `npc.ts` — NPC AI: `createNPC()`, `updateNPCAI()`, `findNearestTarget()`, `respawnNPC()`. NPCs simulate player inputs (keys/mouse) which feed into the same movement system.
   - `spawn.ts` — `randomSpawnPosition()` for placing ships (players and NPCs) at random positions facing away from the origin.
 
-- **`client/`** — Vite + Three.js browser app. `main.ts` is the entry point handling WebSocket connection and the render loop. Supporting modules: `threeSetup.ts` (scene, camera, renderer, bloom post-processing), `inputManager.ts` (keyboard, mouse, pointer lock), `ship.ts` (mesh factory), `starfield.ts`, `celestial.ts` (sun/planets), `projectile.ts`, `hitEffect.ts`, `welcome.ts` (team selection UI), `killFeed.ts`, `scoreboard.ts`, `crosshair.ts`, `heatBar.ts`.
+- **`client/`** — Vite + Three.js browser app. `main.ts` is the entry point handling WebSocket connection and the render loop. Supporting modules: `threeSetup.ts` (scene, camera, renderer, bloom post-processing), `inputManager.ts` (keyboard, mouse, pointer lock), `ship.ts` (mesh factory), `starfield.ts`, `celestial.ts` (sun/planets), `projectile.ts`, `hitEffect.ts`, `welcome.ts` (team selection UI), `killFeed.ts`, `scoreboard.ts`, `crosshair.ts`, `hud.ts` (cockpit-style HUD with hull integrity, flight data, and weapon systems panels).
 
 ### Key Design Patterns
 

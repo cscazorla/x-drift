@@ -18,7 +18,7 @@ import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitE
 import { addKillEntry, killFeedContainer } from './killFeed';
 import { updateScoreboard, scoreboardContainer } from './scoreboard';
 import { crosshairContainer, updateCrosshairHeat } from './crosshair';
-import { heatBarContainer, updateHeatBar } from './heatBar';
+import { hudContainer, updateHud } from './hud';
 import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
 import { createInputManager } from './inputManager';
 import { initThreeScene } from './threeSetup';
@@ -29,14 +29,6 @@ const { scene, camera, renderer, composer, sunLight } = initThreeScene();
 
 // Starfield (follows camera so stars appear infinitely far)
 const stars = createStarfield(scene);
-
-// ---- Debug bar ----
-
-const debugBar = document.createElement('div');
-debugBar.style.cssText =
-  'position:fixed;bottom:0;left:0;width:100%;padding:4px 8px;' +
-  'background:rgba(0,0,0,0.6);color:#0f0;font:12px monospace;z-index:1000;pointer-events:none;display:none';
-document.body.appendChild(debugBar);
 
 // ---- Death overlay ----
 
@@ -117,11 +109,10 @@ function init() {
       console.log(`Joined as player ${myPlayerId}`);
 
       // Show HUD elements
-      debugBar.style.display = '';
       scoreboardContainer.style.display = '';
       killFeedContainer.style.display = 'flex';
       crosshairContainer.style.display = '';
-      heatBarContainer.style.display = '';
+      hudContainer.style.display = '';
       return;
     }
 
@@ -161,7 +152,7 @@ function init() {
             respawnCountdown = 0;
             deathOverlay.style.display = 'none';
             crosshairContainer.style.display = '';
-            heatBarContainer.style.display = '';
+            hudContainer.style.display = '';
           }
 
           // Only update camera if alive (freeze when dead)
@@ -180,15 +171,11 @@ function init() {
 
             // Update heat visuals
             updateCrosshairHeat(me.heat, me.overheated);
-            updateHeatBar(me.heat, me.overheated);
+            updateHud(me.hp, me.heat, me.overheated, me.speed, me.x, me.y, me.z);
           }
 
           // Keep starfield centred on camera
           stars.position.copy(camera.position);
-
-          // Update debug bar
-          const humanCount = msg.players.filter((p) => !p.id.startsWith('npc-')).length;
-          debugBar.textContent = `players ${humanCount}  hp ${me.hp}  pos (${me.x.toFixed(1)}, ${me.y.toFixed(1)}, ${me.z.toFixed(1)})  speed ${me.speed.toFixed(1)}  heat ${(me.heat * 100).toFixed(0)}%${me.overheated ? ' OVERHEATED' : ''}`;
         }
 
         // Update scoreboard
@@ -216,7 +203,7 @@ function init() {
         respawnCountdown = RESPAWN_TIME;
         deathOverlay.style.display = 'flex';
         crosshairContainer.style.display = 'none';
-        heatBarContainer.style.display = 'none';
+        hudContainer.style.display = 'none';
         deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
       }
     }

@@ -37,7 +37,7 @@ x-drift/
 │   │   ├── killFeed.ts    # DOM-based kill feed overlay (top-right)
 │   │   ├── scoreboard.ts  # Top-10 scoreboard overlay (top-left)
 │   │   ├── crosshair.ts   # Centered crosshair reticle with heat feedback
-│   │   └── heatBar.ts     # Weapon heat bar overlay
+│   │   └── hud.ts         # Cockpit HUD (hull integrity, flight data, weapon systems)
 │   ├── package.json
 │   └── tsconfig.json
 ├── server/                # Authoritative game server (Node.js + ws)
@@ -175,7 +175,6 @@ All messages are JSON over WebSocket.
 
 ## Roadmap
 
-- Improve and consolidate player's HUD (Keep current scoreboard aside): health points, fire overheats, coordinates position, speed. It should look like a spaceship HUD. What about using progress bars, icons, etc.
 - Nitro. You can press a button and get hyper speed for a few secons (to runaway from an enemy behind you). There's a huge cooldown so you don't use constantly. Maybe use this for rolling buttons?
 - Move to 3d models (kenney assets)
 - Ship upgrades — As players score eliminations, their ship improves (speed, damage, etc.).
