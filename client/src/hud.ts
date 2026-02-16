@@ -1,4 +1,4 @@
-import { MAX_HP, MAX_SPEED } from '@x-drift/shared';
+import { MAX_HP, MAX_SPEED, type ActiveEffect } from '@x-drift/shared';
 
 // ---- Shared style constants ----
 
@@ -90,6 +90,63 @@ function updateHull(hp: number): void {
   } else {
     hpReadout.style.opacity = '1';
   }
+}
+
+// ===========================================================================
+// LEFT PANEL (upper) — Active Effects
+// ===========================================================================
+
+const effectsPanel = document.createElement('div');
+effectsPanel.style.cssText = panelStyle('bottom:160px;left:20px;width:200px;display:none');
+effectsPanel.appendChild(headerEl('ACTIVE EFFECTS'));
+hudContainer.appendChild(effectsPanel);
+
+interface EffectRow {
+  container: HTMLDivElement;
+  label: HTMLSpanElement;
+  countdown: HTMLSpanElement;
+}
+
+function createEffectRow(labelText: string, color: string): EffectRow {
+  const container = document.createElement('div');
+  container.style.cssText = 'display:none;align-items:center;gap:8px;margin-bottom:4px';
+
+  const label = document.createElement('span');
+  label.style.cssText = `color:${color};font-size:12px;font-weight:bold;width:28px`;
+  label.textContent = labelText;
+  container.appendChild(label);
+
+  const countdown = document.createElement('span');
+  countdown.style.cssText = `color:${color};font-size:12px`;
+  container.appendChild(countdown);
+
+  effectsPanel.appendChild(container);
+  return { container, label, countdown };
+}
+
+const effectShieldRow = createEffectRow('SHD', '#4488ff');
+const effectSpeedRow = createEffectRow('SPD', '#ffdd00');
+const effectRapidFireRow = createEffectRow('RFR', '#ff4400');
+
+function updateEffects(activeEffects: ActiveEffect[]): void {
+  let anyActive = false;
+
+  for (const entry of [
+    { row: effectShieldRow, type: 'shield' },
+    { row: effectSpeedRow, type: 'speed' },
+    { row: effectRapidFireRow, type: 'rapidFire' },
+  ]) {
+    const effect = activeEffects.find((e) => e.type === entry.type);
+    if (effect) {
+      entry.row.container.style.display = 'flex';
+      entry.row.countdown.textContent = `${Math.ceil(effect.remainingTime)}s`;
+      anyActive = true;
+    } else {
+      entry.row.container.style.display = 'none';
+    }
+  }
+
+  effectsPanel.style.display = anyActive ? '' : 'none';
 }
 
 // ===========================================================================
@@ -246,10 +303,12 @@ function updateHud(
   x: number,
   y: number,
   z: number,
+  activeEffects: ActiveEffect[] = [],
 ): void {
   updateHull(hp);
   updateWeapons(heat, overheated);
   updateFlight(speed, x, y, z);
+  updateEffects(activeEffects);
 }
 
 export { hudContainer, updateHud };

@@ -14,13 +14,19 @@ import { getOrCreateShip, removeShip, getShipIds, setThrustState } from './ship'
 import { createStarfield } from './starfield';
 import { createCelestialBodies } from './celestial';
 import { updateProjectiles } from './projectile';
-import { triggerHitFlash, triggerDeathExplosion, updateHitFlashes } from './hitEffect';
+import {
+  triggerHitFlash,
+  triggerShieldAbsorb,
+  triggerDeathExplosion,
+  updateHitFlashes,
+} from './hitEffect';
 import { addKillEntry, killFeedContainer } from './killFeed';
 import { updateScoreboard, scoreboardContainer } from './scoreboard';
 import { crosshairContainer, updateCrosshairHeat } from './crosshair';
 import { hudContainer, updateHud } from './hud';
 import { showWelcomeScreen, type WelcomeScreenHandle } from './welcome';
 import { createInputManager } from './inputManager';
+import { updatePowerUps } from './powerup';
 import { initThreeScene } from './threeSetup';
 
 // ---- Three.js setup ----
@@ -46,6 +52,39 @@ deathOverlay.appendChild(deathTitle);
 deathOverlay.appendChild(deathCountdown);
 document.body.appendChild(deathOverlay);
 
+// ---- Power-up pickup notification ----
+
+const pickupNotification = document.createElement('div');
+pickupNotification.style.cssText =
+  'position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);' +
+  'font:bold 24px monospace;color:#00ff88;text-shadow:0 0 12px rgba(0,255,136,0.6);' +
+  'pointer-events:none;z-index:200;display:none;letter-spacing:2px';
+document.body.appendChild(pickupNotification);
+
+let pickupNotificationTimer = 0;
+
+const POWERUP_LABELS: Record<string, string> = {
+  health: '+ HEALTH',
+  shield: '+ SHIELD',
+  speed: '+ SPEED BOOST',
+  rapidFire: '+ RAPID FIRE',
+};
+
+const POWERUP_COLORS: Record<string, string> = {
+  health: '#00ff88',
+  shield: '#4488ff',
+  speed: '#ffdd00',
+  rapidFire: '#ff4400',
+};
+
+function showPowerUpNotification(powerUpType: string): void {
+  pickupNotification.textContent = POWERUP_LABELS[powerUpType] ?? '+ POWER-UP';
+  pickupNotification.style.color = POWERUP_COLORS[powerUpType] ?? '#00ff88';
+  pickupNotification.style.textShadow = `0 0 12px ${POWERUP_COLORS[powerUpType] ?? '#00ff88'}80`;
+  pickupNotification.style.display = '';
+  pickupNotificationTimer = 2;
+}
+
 // ---- Player state ----
 
 let myPlayerId: string | null = null;
@@ -60,6 +99,14 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
   updateHitFlashes(dt);
+
+  // Update pickup notification
+  if (pickupNotificationTimer > 0) {
+    pickupNotificationTimer -= dt;
+    if (pickupNotificationTimer <= 0) {
+      pickupNotification.style.display = 'none';
+    }
+  }
 
   // Update death countdown
   if (localDead && respawnCountdown > 0) {
@@ -142,6 +189,9 @@ function init() {
       // Update projectile meshes
       updateProjectiles(scene, msg.projectiles, teamByOwner);
 
+      // Update power-up meshes
+      updatePowerUps(scene, msg.powerUps);
+
       // Chase camera follows the local player
       if (myPlayerId) {
         const me = msg.players.find((p: PlayerState) => p.id === myPlayerId);
@@ -171,7 +221,7 @@ function init() {
 
             // Update heat visuals
             updateCrosshairHeat(me.heat, me.overheated);
-            updateHud(me.hp, me.heat, me.overheated, me.speed, me.x, me.y, me.z);
+            updateHud(me.hp, me.heat, me.overheated, me.speed, me.x, me.y, me.z, me.activeEffects);
           }
 
           // Keep starfield centred on camera
@@ -184,7 +234,11 @@ function init() {
     }
 
     if (msg.type === MessageType.Hit) {
-      triggerHitFlash(msg.targetId);
+      if (msg.shieldAbsorbed) {
+        triggerShieldAbsorb(msg.targetId);
+      } else {
+        triggerHitFlash(msg.targetId);
+      }
     }
 
     if (msg.type === MessageType.Kill) {
@@ -205,6 +259,12 @@ function init() {
         crosshairContainer.style.display = 'none';
         hudContainer.style.display = 'none';
         deathCountdown.textContent = `Respawning in ${Math.ceil(respawnCountdown)}s`;
+      }
+    }
+
+    if (msg.type === MessageType.PowerUpPickup) {
+      if (msg.playerId === myPlayerId) {
+        showPowerUpNotification(msg.powerUpType);
       }
     }
   });

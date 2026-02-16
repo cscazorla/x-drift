@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   MAX_HP,
+  MAX_SPEED,
   HEAT_PER_SHOT,
   HEAT_DECAY_RATE,
   OVERHEAT_THRESHOLD,
   OVERHEAT_RECOVERY,
+  POWERUP_SPEED_MULTIPLIER,
+  POWERUP_RAPID_FIRE_HEAT_MULT,
   computeForward,
   type HitMessage,
 } from '@x-drift/shared';
@@ -52,6 +55,7 @@ function makePlayer(overrides: Partial<PlayerLike> = {}): PlayerLike {
     fireCooldown: 0,
     heat: 0,
     overheated: false,
+    effects: [],
     ...overrides,
   };
 }
@@ -112,7 +116,7 @@ describe('updatePlayerMovement', () => {
     const player = makePlayer({ keys: { w: true } });
     // Apply many ticks so it would exceed MAX_SPEED
     for (let i = 0; i < 600; i++) updatePlayerMovement(player, dt);
-    expect(player.speed).toBeCloseTo(10); // MAX_SPEED
+    expect(player.speed).toBeCloseTo(MAX_SPEED);
   });
 
   it('S key → speed decreases, never goes negative', () => {
@@ -181,6 +185,16 @@ describe('updatePlayerMovement', () => {
     const player = makePlayer({ speed: 5, keys: { ArrowDown: true } });
     updatePlayerMovement(player, dt);
     expect(player.speed).toBeLessThan(5);
+  });
+
+  it('speed boost allows exceeding MAX_SPEED', () => {
+    const player = makePlayer({
+      keys: { w: true },
+      effects: [{ type: 'speed', remainingTime: 5 }],
+    });
+    // Run many ticks to reach max
+    for (let i = 0; i < 1200; i++) updatePlayerMovement(player, dt);
+    expect(player.speed).toBeCloseTo(MAX_SPEED * POWERUP_SPEED_MULTIPLIER);
   });
 });
 
@@ -409,6 +423,32 @@ describe('applyDamage', () => {
     applyDamage([makeHit()], [player]);
     expect(player.speed).toBe(0);
   });
+
+  it('shield absorbs hit — HP unchanged, shield consumed', () => {
+    const player = makePlayer({
+      id: 'p1',
+      hp: 4,
+      effects: [{ type: 'shield', remainingTime: 5 }],
+    });
+    const hit = makeHit();
+    applyDamage([hit], [player]);
+    expect(player.hp).toBe(4);
+    expect(player.effects).toHaveLength(0);
+    expect(hit.shieldAbsorbed).toBe(true);
+  });
+
+  it('shield consumed on first hit, second hit deals damage', () => {
+    const player = makePlayer({
+      id: 'p1',
+      hp: 4,
+      effects: [{ type: 'shield', remainingTime: 5 }],
+    });
+    const hit1 = makeHit({ projectileId: 1 });
+    const hit2 = makeHit({ projectileId: 2 });
+    applyDamage([hit1, hit2], [player]);
+    expect(player.hp).toBe(3);
+    expect(player.effects).toHaveLength(0);
+  });
 });
 
 // ---- updateHeat ----
@@ -469,5 +509,18 @@ describe('updateHeat', () => {
     const player = makePlayer({ heat: 0.5, overheated: true });
     updateHeat(player, dt, false);
     expect(player.overheated).toBe(true);
+  });
+
+  it('rapid fire reduces heat gain', () => {
+    const normal = makePlayer({ heat: 0 });
+    const rapid = makePlayer({
+      heat: 0,
+      effects: [{ type: 'rapidFire', remainingTime: 5 }],
+    });
+    updateHeat(normal, 0, true);
+    updateHeat(rapid, 0, true);
+    expect(rapid.heat).toBeCloseTo(HEAT_PER_SHOT * POWERUP_RAPID_FIRE_HEAT_MULT);
+    expect(normal.heat).toBeCloseTo(HEAT_PER_SHOT);
+    expect(rapid.heat).toBeLessThan(normal.heat);
   });
 });

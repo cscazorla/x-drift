@@ -54,6 +54,7 @@ export function createNPC(id: string, team: number): NPC {
     fireCooldown: 0,
     heat: 0,
     overheated: false,
+    effects: [],
     skill,
     targetYaw: spawn.yaw,
     targetPitch: (Math.random() - 0.5) * 0.5,
@@ -88,6 +89,7 @@ export function respawnNPC(npc: NPC): void {
   npc.targetPitch = (Math.random() - 0.5) * 0.5;
   npc.heat = 0;
   npc.overheated = false;
+  npc.effects = [];
   npc.wanderTimer =
     NPC_WANDER_INTERVAL_MIN + Math.random() * (NPC_WANDER_INTERVAL_MAX - NPC_WANDER_INTERVAL_MIN);
 }

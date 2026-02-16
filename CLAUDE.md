@@ -37,16 +37,18 @@ Both server and client must be running simultaneously for development. Open mult
   - `index.ts` — WebSocket server, game loop (60 Hz tick), player connection lifecycle, lobby system, state broadcasting. Orchestrates the tick: apply inputs → update NPC AI → update positions → spawn projectiles → move projectiles → detect collisions → apply damage → handle respawns.
   - `game.ts` — Pure functions for game logic: `updatePlayerMovement()`, `spawnProjectile()`, `moveProjectiles()`, `detectCollisions()`, `applyDamage()`. No I/O, fully testable.
   - `npc.ts` — NPC AI: `createNPC()`, `updateNPCAI()`, `findNearestTarget()`, `respawnNPC()`. NPCs simulate player inputs (keys/mouse) which feed into the same movement system.
+  - `powerup.ts` — Pure power-up logic: `createPowerUpSlots()`, `detectPowerUpPickups()`, `applyPowerUpEffect()`, `tickEffects()`, `updatePowerUpCooldowns()`, `hasEffect()`. Four types: health, shield, speed, rapidFire.
   - `spawn.ts` — `randomSpawnPosition()` for placing ships (players and NPCs) at random positions facing away from the origin.
 
-- **`client/`** — Vite + Three.js browser app. `main.ts` is the entry point handling WebSocket connection and the render loop. Supporting modules: `threeSetup.ts` (scene, camera, renderer, bloom post-processing), `inputManager.ts` (keyboard, mouse, pointer lock), `ship.ts` (mesh factory), `starfield.ts`, `celestial.ts` (sun/planets), `projectile.ts`, `hitEffect.ts`, `welcome.ts` (team selection UI), `killFeed.ts`, `scoreboard.ts`, `crosshair.ts`, `hud.ts` (cockpit-style HUD with hull integrity, flight data, and weapon systems panels).
+- **`client/`** — Vite + Three.js browser app. `main.ts` is the entry point handling WebSocket connection and the render loop. Supporting modules: `threeSetup.ts` (scene, camera, renderer, bloom post-processing), `inputManager.ts` (keyboard, mouse, pointer lock), `ship.ts` (mesh factory), `starfield.ts`, `celestial.ts` (sun/planets), `projectile.ts`, `hitEffect.ts` (hit flash, death explosion, shield absorb effects), `powerup.ts` (3D power-up rendering with octahedron geometry and glow), `welcome.ts` (team selection UI), `killFeed.ts`, `scoreboard.ts`, `crosshair.ts`, `hud.ts` (cockpit-style HUD with hull integrity, flight data, weapon systems, and active effects panels).
 
 ### Key Design Patterns
 
 - **Input-driven simulation**: Both players and NPCs produce the same input shape (`keys`, `mouseDx`, `mouseDy`, `fire`). The server's `updatePlayerMovement()` processes them identically. NPC AI just generates synthetic inputs.
 - **Lobby phase**: Players connect to a lobby first, receive live `teamInfo` updates, then send `joinTeam` to enter the game.
 - **Team system**: Team 0 = green, Team 1 = red. No friendly fire — collisions and projectile hits check team membership.
-- **State broadcast**: Every tick, the server sends a full `state` snapshot (all players + projectiles) to each client. No delta compression or client-side prediction yet.
+- **Power-up system**: Four power-up types (health, shield, speed, rapidFire) spawn randomly in the world. Players and NPCs pick them up by flying through them. Timed effects replace on re-pickup (no stacking). Slots respawn after a cooldown at new random positions.
+- **State broadcast**: Every tick, the server sends a full `state` snapshot (all players + projectiles + power-ups) to each client. No delta compression or client-side prediction yet.
 
 ## Testing
 

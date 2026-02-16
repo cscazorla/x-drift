@@ -17,6 +17,8 @@ export const enum MessageType {
   Hit = 'hit',
   /** Server → Client: a ship was destroyed */
   Kill = 'kill',
+  /** Server → Client: a power-up was picked up */
+  PowerUpPickup = 'powerUpPickup',
 }
 
 // ---- Client → Server messages ----
@@ -89,6 +91,19 @@ export interface TeamInfoMessage {
   playerName?: string;
 }
 
+export interface ActiveEffect {
+  type: 'shield' | 'speed' | 'rapidFire';
+  remainingTime: number; // seconds left, decremented by dt each tick
+}
+
+export interface PowerUpState {
+  id: number;
+  type: 'health' | 'shield' | 'speed' | 'rapidFire';
+  x: number;
+  y: number;
+  z: number;
+}
+
 export interface PlayerState {
   id: string;
   name: string;
@@ -106,12 +121,14 @@ export interface PlayerState {
   team: number; // 0 = green, 1 = red
   heat: number;
   overheated: boolean;
+  activeEffects: ActiveEffect[];
 }
 
 export interface StateMessage {
   type: MessageType.State;
   players: PlayerState[];
   projectiles: ProjectileState[];
+  powerUps: PowerUpState[];
 }
 
 export interface HitMessage {
@@ -122,6 +139,7 @@ export interface HitMessage {
   x: number;
   y: number;
   z: number;
+  shieldAbsorbed?: boolean;
 }
 
 export interface KillMessage {
@@ -137,12 +155,23 @@ export interface KillMessage {
   z: number;
 }
 
+export interface PowerUpPickupMessage {
+  type: MessageType.PowerUpPickup;
+  playerId: string;
+  playerName: string;
+  powerUpType: 'health' | 'shield' | 'speed' | 'rapidFire';
+  x: number;
+  y: number;
+  z: number;
+}
+
 export type ServerMessage =
   | WelcomeMessage
   | TeamInfoMessage
   | StateMessage
   | HitMessage
-  | KillMessage;
+  | KillMessage
+  | PowerUpPickupMessage;
 export type ClientMessage = InputMessage | JoinTeamMessage;
 
 // ---- Constants ----
@@ -186,7 +215,21 @@ export const NPC_AIM_THRESHOLD_MAX = 0.5; // ~29 deg — skill=0.3 fires very lo
 export const NPC_FIRE_COOLDOWN = 0.8; // seconds — NPCs shoot slower than players (0.3)
 
 // Heat / overheat constants
-export const HEAT_PER_SHOT = 0.10; // heat added per shot
-export const HEAT_DECAY_RATE = 0.20; // heat removed per second
+export const HEAT_PER_SHOT = 0.1; // heat added per shot
+export const HEAT_DECAY_RATE = 0.2; // heat removed per second
 export const OVERHEAT_THRESHOLD = 1.0; // heat level that triggers overheat lockout
 export const OVERHEAT_RECOVERY = 0.0; // must cool fully before firing again
+
+// Power-up constants
+export const POWERUP_COUNT = 5;
+export const POWERUP_PICKUP_RADIUS = 3;
+export const POWERUP_RESPAWN_COOLDOWN = 30;
+export const POWERUP_SHIELD_DURATION = 10;
+export const POWERUP_SPEED_DURATION = 8;
+export const POWERUP_RAPID_FIRE_DURATION = 8;
+export const POWERUP_SPEED_MULTIPLIER = 1.5;
+export const POWERUP_RAPID_FIRE_COOLDOWN_MULT = 0.5;
+export const POWERUP_RAPID_FIRE_HEAT_MULT = 0.5;
+export const POWERUP_SPAWN_RADIUS_MIN = 40;
+export const POWERUP_SPAWN_RADIUS_MAX = 120;
+export const POWERUP_SPAWN_Y_RANGE = 30;

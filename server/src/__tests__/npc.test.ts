@@ -44,6 +44,7 @@ function makeNPC(overrides: Partial<NPC> = {}): NPC {
     fireCooldown: 0,
     heat: 0,
     overheated: false,
+    effects: [],
     skill: 0.5,
     targetYaw: 0,
     targetPitch: 0,

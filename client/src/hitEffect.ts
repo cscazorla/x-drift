@@ -38,6 +38,31 @@ export function triggerHitFlash(shipId: string): void {
   activeFlashes.push({ shipId, timer: FLASH_DURATION, originals });
 }
 
+export function triggerShieldAbsorb(shipId: string): void {
+  // Anti-stacking: ignore if already flashing
+  if (activeFlashes.some((f) => f.shipId === shipId)) return;
+
+  const ship = getShip(shipId);
+  if (!ship) return;
+
+  const originals = new Map<THREE.Mesh, THREE.Material>();
+  ship.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      const mesh = child as THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+      const orig = mesh.material as THREE.MeshStandardMaterial;
+      originals.set(mesh, orig);
+      const flash = new THREE.MeshStandardMaterial({
+        color: 0x4488ff,
+        emissive: 0x4488ff,
+        emissiveIntensity: 3,
+      });
+      mesh.material = flash;
+    }
+  });
+
+  activeFlashes.push({ shipId, timer: FLASH_DURATION, originals });
+}
+
 export function triggerDeathExplosion(shipId: string): void {
   // Remove any existing flash for this ship
   for (let i = activeFlashes.length - 1; i >= 0; i--) {

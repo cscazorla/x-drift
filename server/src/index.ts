@@ -7,10 +7,14 @@ import {
   NPC_FIRE_COOLDOWN,
   MAX_HP,
   RESPAWN_TIME,
+  POWERUP_COUNT,
+  POWERUP_RAPID_FIRE_COOLDOWN_MULT,
+  type ActiveEffect,
   type CelestialBody,
   type ClientMessage,
   type PlayerState,
   type ProjectileState,
+  type PowerUpState,
   type StateMessage,
   type WelcomeMessage,
   type TeamInfoMessage,
@@ -28,6 +32,16 @@ import {
 } from './game.js';
 import { type NPC, createAllNPCs, updateNPCAI, respawnNPC } from './npc.js';
 import { randomSpawnPosition } from './spawn.js';
+import {
+  type PowerUpSlot,
+  type PickupEvent,
+  createPowerUpSlots,
+  detectPowerUpPickups,
+  applyPowerUpEffect,
+  tickEffects,
+  updatePowerUpCooldowns,
+  hasEffect,
+} from './powerup.js';
 
 // ---- Celestial bodies ----
 
@@ -138,6 +152,7 @@ interface Player {
   fireCooldown: number;
   heat: number;
   overheated: boolean;
+  effects: ActiveEffect[];
   respawnTimer: number;
   kills: number;
   deaths: number;
@@ -153,6 +168,7 @@ const players = new Map<string, Player>();
 let nextId = 1;
 const npcs: NPC[] = createAllNPCs();
 const npcRespawnTimers = new Map<string, number>();
+const powerUpSlots: PowerUpSlot[] = createPowerUpSlots(POWERUP_COUNT, 1);
 
 // ---- Name pool ----
 
@@ -281,6 +297,7 @@ wss.on('connection', (ws) => {
           fireCooldown: 0,
           heat: 0,
           overheated: false,
+          effects: [],
           respawnTimer: 0,
           kills: 0,
           deaths: 0,
@@ -356,6 +373,19 @@ const dt = 1 / TICK_RATE;
 function tick() {
   // --- Simulation phase ---
 
+  // 0. Power-up system: expire effects, update cooldowns, detect pickups
+  for (const player of players.values()) tickEffects(player, dt);
+  for (const npc of npcs) tickEffects(npc, dt);
+
+  updatePowerUpCooldowns(powerUpSlots, dt);
+
+  const alivePickupTargets = [...players.values(), ...npcs].filter((e) => e.hp > 0);
+  const pickups: PickupEvent[] = detectPowerUpPickups(powerUpSlots, alivePickupTargets);
+  for (const pickup of pickups) {
+    const entity = alivePickupTargets.find((e) => e.id === pickup.entityId);
+    if (entity) applyPowerUpEffect(entity, pickup.type);
+  }
+
   // 1. Movement: skip dead entities
   for (const player of players.values()) {
     if (player.hp > 0) updatePlayerMovement(player, dt);
@@ -388,7 +418,8 @@ function tick() {
     if (proj) {
       projectiles.push(proj);
       nextProjectileId++;
-      player.fireCooldown = FIRE_COOLDOWN;
+      const cooldownMult = hasEffect(player, 'rapidFire') ? POWERUP_RAPID_FIRE_COOLDOWN_MULT : 1;
+      player.fireCooldown = FIRE_COOLDOWN * cooldownMult;
     }
     updateHeat(player, dt, proj !== null);
     player.fire = false;
@@ -406,7 +437,8 @@ function tick() {
     if (proj) {
       projectiles.push(proj);
       nextProjectileId++;
-      npc.fireCooldown = NPC_FIRE_COOLDOWN;
+      const cooldownMult = hasEffect(npc, 'rapidFire') ? POWERUP_RAPID_FIRE_COOLDOWN_MULT : 1;
+      npc.fireCooldown = NPC_FIRE_COOLDOWN * cooldownMult;
     }
     updateHeat(npc, dt, proj !== null);
     npc.fire = false;
@@ -483,6 +515,7 @@ function tick() {
         player.hp = MAX_HP;
         player.heat = 0;
         player.overheated = false;
+        player.effects = [];
         player.respawnTimer = 0;
       }
     }
@@ -529,6 +562,11 @@ function tick() {
       team: humanPlayer?.team ?? npc?.team ?? 0,
       heat: p.heat,
       overheated: p.overheated,
+      activeEffects:
+        (p as { effects?: ActiveEffect[] }).effects?.map((e) => ({
+          type: e.type,
+          remainingTime: e.remainingTime,
+        })) ?? [],
     });
   }
 
@@ -543,14 +581,36 @@ function tick() {
     dz: p.dz,
   }));
 
+  const powerUpStates: PowerUpState[] = powerUpSlots
+    .filter((s) => s.cooldown <= 0)
+    .map((s) => ({
+      id: s.id,
+      type: s.type,
+      x: s.x,
+      y: s.y,
+      z: s.z,
+    }));
+
   const stateMsg: StateMessage = {
     type: MessageType.State,
     players: playerStates,
     projectiles: projectileStates,
+    powerUps: powerUpStates,
   };
   const payload = JSON.stringify(stateMsg);
   const hitPayloads = hits.map((h) => JSON.stringify(h));
   const killPayloads = allKills.map((k) => JSON.stringify(k));
+  const pickupPayloads = pickups.map((p) =>
+    JSON.stringify({
+      type: MessageType.PowerUpPickup,
+      playerId: p.entityId,
+      playerName: players.get(p.entityId)?.name ?? p.entityId,
+      powerUpType: p.type,
+      x: p.x,
+      y: p.y,
+      z: p.z,
+    }),
+  );
 
   for (const player of players.values()) {
     if (player.ws.readyState === WebSocket.OPEN) {
@@ -560,6 +620,9 @@ function tick() {
       }
       for (const kp of killPayloads) {
         player.ws.send(kp);
+      }
+      for (const pp of pickupPayloads) {
+        player.ws.send(pp);
       }
     }
   }

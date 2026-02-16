@@ -32,12 +32,13 @@ x-drift/
 │   │   ├── starfield.ts   # Particle-based starfield that follows the camera
 │   │   ├── celestial.ts   # Sun and planet renderer from server data
 │   │   ├── projectile.ts  # Projectile beam renderer (synced from server state)
-│   │   ├── hitEffect.ts   # Hit flash + death explosion effects
+│   │   ├── hitEffect.ts   # Hit flash, death explosion, and shield absorb effects
+│   │   ├── powerup.ts     # 3D power-up renderer (octahedron crystals with glow)
 │   │   ├── welcome.ts     # Welcome screen with team selection and live counts
 │   │   ├── killFeed.ts    # DOM-based kill feed overlay (top-right)
 │   │   ├── scoreboard.ts  # Top-10 scoreboard overlay (top-left)
 │   │   ├── crosshair.ts   # Centered crosshair reticle with heat feedback
-│   │   └── hud.ts         # Cockpit HUD (hull integrity, flight data, weapon systems)
+│   │   └── hud.ts         # Cockpit HUD (hull integrity, flight data, weapon systems, active effects)
 │   ├── package.json
 │   └── tsconfig.json
 ├── server/                # Authoritative game server (Node.js + ws)
@@ -45,11 +46,13 @@ x-drift/
 │   │   ├── index.ts       # WebSocket server + game loop
 │   │   ├── game.ts        # Pure game logic (movement, projectiles, collisions, damage)
 │   │   ├── npc.ts         # NPC ship AI (wander + combat behavior, input simulation)
+│   │   ├── powerup.ts     # Pure power-up logic (spawn, pickup, effects, cooldowns)
 │   │   ├── spawn.ts       # Random spawn position generator
 │   │   └── __tests__/
 │   │       ├── game.test.ts
 │   │       ├── math.test.ts
 │   │       ├── npc.test.ts
+│   │       ├── powerup.test.ts
 │   │       └── spawn.test.ts
 │   ├── vitest.config.ts
 │   ├── package.json
@@ -181,4 +184,3 @@ All messages are JSON over WebSocket.
 - Improve NPCs AI:
   - If a NPX notices he is far away from the sun (position 0, 0, 0) he should go back to the sun and, when he gets around 100 units near the sun, he starts wandering again until he finds a new target.
 - Client-side interpolation — Smooth movement between server snapshots so motion doesn't look choppy.
-- Add power ups (health packs, armour/shield, nitro, etc.)

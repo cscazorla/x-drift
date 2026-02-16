@@ -15,8 +15,11 @@ import {
   HEAT_DECAY_RATE,
   OVERHEAT_THRESHOLD,
   OVERHEAT_RECOVERY,
+  POWERUP_SPEED_MULTIPLIER,
+  POWERUP_RAPID_FIRE_HEAT_MULT,
   computeForward,
   distanceSq,
+  type ActiveEffect,
   type CelestialBody,
   type HitMessage,
   type KillMessage,
@@ -54,6 +57,7 @@ export interface PlayerLike {
   fireCooldown: number;
   heat: number;
   overheated: boolean;
+  effects: ActiveEffect[];
 }
 
 // ---- Pure functions ----
@@ -80,8 +84,11 @@ export function updatePlayerMovement(player: PlayerLike, dt: number): void {
   const fwd = computeForward(player.yaw, player.pitch);
 
   // 4. Update speed
+  const effectiveMaxSpeed = player.effects.some((e) => e.type === 'speed')
+    ? MAX_SPEED * POWERUP_SPEED_MULTIPLIER
+    : MAX_SPEED;
   if (player.keys.w || player.keys.ArrowUp) {
-    player.speed = Math.min(player.speed + ACCELERATION * dt, MAX_SPEED);
+    player.speed = Math.min(player.speed + ACCELERATION * dt, effectiveMaxSpeed);
   } else if (player.keys.s || player.keys.ArrowDown) {
     player.speed = Math.max(player.speed - BRAKE_FORCE * dt, 0);
   }
@@ -203,6 +210,14 @@ export function applyDamage(
     const target = lookup.get(hit.targetId);
     if (!target || target.hp <= 0) continue;
 
+    // Shield absorbs one hit
+    const shieldIdx = target.effects?.findIndex((e) => e.type === 'shield') ?? -1;
+    if (shieldIdx >= 0) {
+      target.effects.splice(shieldIdx, 1);
+      hit.shieldAbsorbed = true;
+      continue;
+    }
+
     target.hp -= 1;
     if (target.hp <= 0) {
       target.speed = 0;
@@ -314,7 +329,10 @@ export function updateHeat(player: PlayerLike, dt: number, justFired: boolean): 
 
   // Add heat from firing
   if (justFired) {
-    player.heat = Math.min(OVERHEAT_THRESHOLD, player.heat + HEAT_PER_SHOT);
+    const heatMult = player.effects.some((e) => e.type === 'rapidFire')
+      ? POWERUP_RAPID_FIRE_HEAT_MULT
+      : 1;
+    player.heat = Math.min(OVERHEAT_THRESHOLD, player.heat + HEAT_PER_SHOT * heatMult);
   }
 
   // Enter overheat
