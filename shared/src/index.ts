@@ -149,7 +149,7 @@ export type ClientMessage = InputMessage | JoinTeamMessage;
 
 export const SERVER_PORT = 3000;
 export const TICK_RATE = 60; // server ticks per second
-export const MAX_SPEED = 10; // units per second (top speed)
+export const MAX_SPEED = 25; // units per second (top speed)
 export const ACCELERATION = 5; // units/second² when pressing W
 export const BRAKE_FORCE = 8; // units/second² when pressing S
 export const MOUSE_SENSITIVITY = 0.003;
@@ -186,7 +186,7 @@ export const NPC_AIM_THRESHOLD_MAX = 0.5; // ~29 deg — skill=0.3 fires very lo
 export const NPC_FIRE_COOLDOWN = 0.8; // seconds — NPCs shoot slower than players (0.3)
 
 // Heat / overheat constants
-export const HEAT_PER_SHOT = 0.15; // heat added per shot (~7 shots to overheat)
-export const HEAT_DECAY_RATE = 0.25; // heat removed per second
+export const HEAT_PER_SHOT = 0.10; // heat added per shot
+export const HEAT_DECAY_RATE = 0.20; // heat removed per second
 export const OVERHEAT_THRESHOLD = 1.0; // heat level that triggers overheat lockout
 export const OVERHEAT_RECOVERY = 0.0; // must cool fully before firing again
