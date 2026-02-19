@@ -64,6 +64,29 @@ Tests use **Vitest** and live in `server/src/__tests__/`. They cover shared math
 - **ESLint** (9.x) — Linting with `typescript-eslint` type-checked rules
 - **Prettier** (3.x) — Code formatting
 
+## Deployment
+
+Client is on **Cloudflare Pages** (static site), server is on **Render** (Docker container, free tier).
+
+```bash
+# Build client for production (outputs to client/dist/)
+npm run build --workspace=client
+
+# Build server Docker image
+docker build -t x-drift-server .
+
+# Run server container locally
+docker run -p 10000:10000 -e PORT=10000 x-drift-server
+```
+
+**Environment variables:**
+
+- `VITE_WS_URL` — Client build-time WebSocket URL (e.g. `wss://x-drift-server.onrender.com`). Falls back to `ws://localhost:3000` for dev.
+- `PORT` — Server listen port. Defaults to `3000` (Render sets `10000`).
+- `HOST` — Server bind host. Defaults to `localhost` (container sets `0.0.0.0`).
+
+Deployment files: `Dockerfile`, `.dockerignore`, `render.yaml` (Render Blueprint).
+
 ## Linting & Formatting
 
 ```bash

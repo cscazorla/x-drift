@@ -22,6 +22,9 @@ Online 3D space battle game set in a galaxy. Players pilot an X-wing-style ship 
 x-drift/
 ├── package.json           # Workspace root
 ├── tsconfig.base.json     # Shared TypeScript config
+├── Dockerfile             # Server container image (multi-stage, monorepo-aware)
+├── .dockerignore          # Excludes client, node_modules, git from Docker context
+├── render.yaml            # Render Blueprint for server deployment
 ├── client/                # Browser client (Vite + Three.js)
 │   ├── index.html
 │   ├── src/
@@ -140,6 +143,59 @@ Open `http://localhost:5173` in your browser. You can open multiple tabs to simu
 ```bash
 npm test --workspace=server
 ```
+
+## Deployment
+
+The client and server are deployed separately:
+
+- **Client** — Static site on [Cloudflare Pages](https://pages.cloudflare.com/) (free tier, unlimited bandwidth)
+- **Server** — Docker container on [Render](https://render.com/) (free tier, auto-sleeps when idle)
+
+### Build the Client
+
+```bash
+npm run build --workspace=client
+```
+
+Output goes to `client/dist/`.
+
+### Build the Server Docker Image
+
+```bash
+docker build -t x-drift-server .
+docker run -p 10000:10000 -e PORT=10000 x-drift-server
+```
+
+### Cloudflare Pages Configuration
+
+| Setting                  | Value                                            |
+| ------------------------ | ------------------------------------------------ |
+| Build command            | `npm install && npm run build --workspace=client` |
+| Build output directory   | `client/dist`                                    |
+| Root directory           | `/` (monorepo root)                              |
+
+**Environment variables:**
+
+| Variable       | Value                                 | Description                     |
+| -------------- | ------------------------------------- | ------------------------------- |
+| `VITE_WS_URL`  | `wss://x-drift-server.onrender.com`   | WebSocket server URL            |
+| `NODE_VERSION` | `20`                                  | Node.js version for build       |
+
+### Render Configuration
+
+Render auto-detects the `Dockerfile` and `render.yaml`. Alternatively, configure via the dashboard:
+
+- **Service type:** Web Service
+- **Runtime:** Docker
+- **Plan:** Free
+
+### Environment Variables Reference
+
+| Variable       | Used by | Default       | Description                              |
+| -------------- | ------- | ------------- | ---------------------------------------- |
+| `VITE_WS_URL`  | Client  | `ws://localhost:3000` | WebSocket server URL (build-time)  |
+| `PORT`         | Server  | `3000`        | Port to listen on (Render sets `10000`)  |
+| `HOST`         | Server  | `localhost`   | Host to bind to (`0.0.0.0` in container) |
 
 ## Controls
 

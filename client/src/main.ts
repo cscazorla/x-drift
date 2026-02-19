@@ -123,7 +123,8 @@ animate();
 
 function init() {
   // Connect WebSocket first (before showing welcome screen)
-  const ws = new WebSocket(`ws://localhost:${SERVER_PORT}`);
+  const wsUrl = (import.meta.env.VITE_WS_URL as string | undefined) ?? `ws://localhost:${SERVER_PORT}`;
+  const ws = new WebSocket(wsUrl);
 
   // Wait for first TeamInfo, then show the welcome screen with team counts
   let welcomeHandle: WelcomeScreenHandle | null = null;

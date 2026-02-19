@@ -1,0 +1,11 @@
+node_modules
+dist
+*.tsbuildinfo
+.git
+.gitignore
+.env
+client
+README.md
+CLAUDE.md
+eslint.config*
+.prettierrc*

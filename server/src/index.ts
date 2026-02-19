@@ -248,7 +248,9 @@ function broadcastTeamInfo(): void {
 
 // ---- WebSocket server ----
 
-const wss = new WebSocketServer({ port: SERVER_PORT });
+const port = parseInt(process.env.PORT ?? String(SERVER_PORT), 10);
+const host = process.env.HOST ?? 'localhost';
+const wss = new WebSocketServer({ port, host });
 
 wss.on('connection', (ws) => {
   // Start in lobby — send team counts, don't create a player yet
@@ -630,4 +632,4 @@ function tick() {
 
 setInterval(tick, 1000 / TICK_RATE);
 
-console.log(`X-Drift server listening on ws://localhost:${SERVER_PORT}`);
+console.log(`X-Drift server listening on ws://${host}:${port}`);
